@@ -5,6 +5,7 @@ from datetime import datetime
 
 import matplotlib.pyplot as plt
 import matplotlib.dates as md
+from scipy.stats import gaussian_kde
 from sklearn.linear_model import LogisticRegression
 from sklearn import svm
 import numpy as np
@@ -115,13 +116,13 @@ def queue_imbalance(df: pd.DataFrame, index: int):
 
 def add_mid_price_indicator(df: pd.DataFrame) -> pd.DataFrame:
     y = []
-    previous_mid_price = get_mid_price(df, 0)
-    for i in range(1, len(df)):
-        current_mid_price = get_mid_price(df, i)
-        y.append(int(current_mid_price > previous_mid_price))
-        previous_mid_price = current_mid_price
-    df = df.drop(df.index[0])
-    df['mid_price_indicator'] = y
+    current_mid_price = get_mid_price(df, 0)
+    for i in range(0, len(df)-1):
+        future_mid_price = get_mid_price(df, i+1)
+        y.append(int(future_mid_price > current_mid_price))
+        current_mid_price = future_mid_price
+    df['mid_price_indicator'] = y + [None]
+    df = df.dropna()
     return df
 
 
@@ -134,6 +135,7 @@ def add_queue_imbalance(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def prepare_dataframe(df):
+    df = df.between_time('10:00', '15:00')
     df['bid_price'] = [get_bid_price(df, i) for i in range(len(df))]
     df['ask_price'] = [get_ask_price(df, i) for i in range(len(df))]
     df['mid_price'] = [get_mid_price(df, i) for i in range(len(df))]
@@ -141,8 +143,6 @@ def prepare_dataframe(df):
                           range(len(df))]
     df['sum_buy_bid'] = [sum_buy_active_orders(get_bid_price(df, i), df, i) for i in
                          range(len(df))]
-    df = add_mid_price_indicator(df)
-    df = add_queue_imbalance(df)
     rows_to_remove = []
     for i in range(len(df) - 1, 0, -1):
         if df['mid_price'].iloc[i] == df['mid_price'].iloc[i - 1]:
@@ -150,11 +150,13 @@ def prepare_dataframe(df):
 
     for r in rows_to_remove:  # rows_to_remove is reversed so we can just remove
         df = df.drop(df.index[r])
+    df = add_mid_price_indicator(df)
+    df = add_queue_imbalance(df)
     return df
 
 
 def svm_classification(df, start_idx, end_idx):
-    clf = svm.SVC()
+    clf = svm.SVC(probability=True)
     X = df['queue_imbalance'][start_idx:end_idx].values.reshape(-1, 1)
     y = df['mid_price_indicator'][start_idx:end_idx].values.reshape(-1, 1)
     y[0] = 0
@@ -173,3 +175,17 @@ def logistic_regression(df, start_idx, end_idx):
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
+
+def plot_density_imbalance_vs_mid(df, st, end):    
+    y = df['queue_imbalance'].iloc[st:end].values
+    x = df['mid_price'].iloc[st:end].values
+    xy = np.vstack([x,y])
+    z = gaussian_kde(xy)(xy)
+
+    # that most dense points are plotted last
+    idx = z.argsort()
+    x, y, z = x[idx], y[idx], z[idx]
+
+    fig, ax = plt.subplots()
+    ax.scatter(x, y, c=z, s=50, edgecolor='')
+    plt.figure()
