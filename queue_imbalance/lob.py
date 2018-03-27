@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as md
 from scipy.stats import gaussian_kde
 from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
 from sklearn import svm
 import numpy as np
 
@@ -58,18 +59,20 @@ def parse_data(filename: str) -> pd.DataFrame:
 
 def load_data(company: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
     dfs = {}
-    train_dates = ['0901', '0916', '1001', '1016']
-    test_date = '1101'
+    train_dates = ['0916', '1001', '1016', '1101']
+    train_date = '0901'
     for date in train_dates:
         df = parse_data('data/LOB/OrderBookSnapshots_{}_{}.csv'.format(company, date))
-        dfs[date] = prepare_dataframe(df)
-    df_test = parse_data('data/LOB/OrderBookSnapshots_{}_{}.csv'.format(company, test_date))
-    df_test = prepare_dataframe(df_test)
+        dfs[date] = df
     df = pd.concat(dfs.values()).sort_index()
-
-    print('Training set length:', len(df))
-    print('Testing set length:', len(df_test))
-    return df, df_test
+    
+    train = df
+    test = parse_data('data/LOB/OrderBookSnapshots_{}_{}.csv'.format(company, train_date))
+    train = prepare_dataframe(train)
+    test = prepare_dataframe(test)
+    print('Training set length:', len(train))
+    print('Testing set length:', len(test))
+    return train, test
 
 
 def get_bid_price(df: pd.DataFrame, index: int) -> float:
@@ -135,7 +138,7 @@ def add_queue_imbalance(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def prepare_dataframe(df):
-    df = df.between_time('10:00', '15:00')
+    df = df.between_time('9:00', '15:00')
     df['bid_price'] = [get_bid_price(df, i) for i in range(len(df))]
     df['ask_price'] = [get_ask_price(df, i) for i in range(len(df))]
     df['mid_price'] = [get_mid_price(df, i) for i in range(len(df))]
