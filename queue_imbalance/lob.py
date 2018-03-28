@@ -4,10 +4,8 @@ from typing import Tuple
 from datetime import datetime
 
 import matplotlib.pyplot as plt
-import matplotlib.dates as md
 from scipy.stats import gaussian_kde
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
 from sklearn import svm
 import numpy as np
 
@@ -57,34 +55,46 @@ def parse_data(filename: str) -> pd.DataFrame:
     return df
 
 
-def load_data(company: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def subsample(df):
+    df_day = []
+    for idx, day in df.groupby(df.index.day):
+        df_day.append(day.sample(300))
+    return pd.concat(df_day).sort_index()
+
+
+def load_data(stock: str, should_sample=False) -> Tuple[pd.DataFrame, pd.DataFrame]:
     dfs = {}
     train_dates = ['0916', '1001', '1016', '1101']
     train_date = '0901'
     for date in train_dates:
-        df = parse_data('data/LOB/OrderBookSnapshots_{}_{}.csv'.format(company, date))
+        df = parse_data('data/LOB/OrderBookSnapshots_{}_{}.csv'.format(stock, date))
+        df = df.between_time('9:00', '15:00')
         dfs[date] = df
     df = pd.concat(dfs.values()).sort_index()
-    
     train = df
-    test = parse_data('data/LOB/OrderBookSnapshots_{}_{}.csv'.format(company, train_date))
+    test = parse_data('data/LOB/OrderBookSnapshots_{}_{}.csv'.format(stock, train_date))
+    if should_sample:
+        print('len before sub-sampling', len(train), len(test))
+        train = subsample(train)
+        test = subsample(test)
+        print('len after sub-sampling', len(train), len(test))
     train = prepare_dataframe(train)
     test = prepare_dataframe(test)
-    print('Training set length:', len(train))
-    print('Testing set length:', len(test))
+    print('Training set length for {}: {}'.format(stock, len(train)))
+    print('Testing set length for {}: {}'.format(stock, len(test)))
     return train, test
 
 
 def get_bid_price(df: pd.DataFrame, index: int) -> float:
     bid_list = df['bid'][index]
-    if not bid_list:
+    if not np.any(bid_list):
         return 0
     return max([price for price, vol in bid_list])
 
 
 def get_ask_price(df: pd.DataFrame, index: int) -> float:
     ask_list = df['ask'][index]
-    if not ask_list:
+    if not np.any(ask_list):
         return 0
     return min([price for price, vol in ask_list])
 
@@ -96,13 +106,13 @@ def get_mid_price(df: pd.DataFrame, index: int) -> float:
 
 
 def sum_buy_active_orders(price: float, df: pd.DataFrame, index: int) -> float:
-    if not df['bid'][index]:
+    if not np.any(df['bid'][index]):
         return 0
     return sum([vol for p, vol in df['bid'][index] if p == price])
 
 
 def sum_sell_active_orders(price: float, df: pd.DataFrame, index: int) -> float:
-    if not df['ask'][index]:
+    if not np.any(df['ask'][index]):
         return 0
     return sum([vol for p, vol in df['ask'][index] if p == price])
 
@@ -138,7 +148,6 @@ def add_queue_imbalance(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def prepare_dataframe(df):
-    df = df.between_time('9:00', '15:00')
     df['bid_price'] = [get_bid_price(df, i) for i in range(len(df))]
     df['ask_price'] = [get_ask_price(df, i) for i in range(len(df))]
     df['mid_price'] = [get_mid_price(df, i) for i in range(len(df))]
@@ -162,22 +171,21 @@ def svm_classification(df, start_idx, end_idx):
     clf = svm.SVC(probability=True)
     X = df['queue_imbalance'][start_idx:end_idx].values.reshape(-1, 1)
     y = df['mid_price_indicator'][start_idx:end_idx].values.reshape(-1, 1)
-    y[0] = 0
     clf.fit(X, y)
     return clf
 
 
 def logistic_regression(df, start_idx, end_idx):
-    clf = LogisticRegression()
+    clf = LogisticRegressionCV(fit_intercept=True, solver='sag')
     X = df['queue_imbalance'][start_idx:end_idx].values.reshape(-1, 1)
     y = df['mid_price_indicator'][start_idx:end_idx].values.ravel()
-    y[0] = 0
     clf.fit(X, y)
     return clf
 
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
+
 
 def plot_density_imbalance_vs_mid(df, st, end):    
     y = df['queue_imbalance'].iloc[st:end].values
