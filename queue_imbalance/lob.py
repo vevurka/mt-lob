@@ -54,35 +54,38 @@ def parse_data(filename: str) -> pd.DataFrame:
                       index=[p[0] for p in parsed_order_book], columns=['bid', 'ask'])
     return df
 
-
-def subsample(df):
-    df_day = []
-    for idx, day in df.groupby(df.index.day):
-        df_day.append(day.sample(300))
-    return pd.concat(df_day).sort_index()
-
-
-def load_data(stock: str, should_sample=False) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    dfs = {}
-    train_dates = ['0916', '1001', '1016', '1101']
-    train_date = '0901'
+def load_data(stock: str, data_dir=None, cv=False) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    if data_dir is None:
+        data_dir = 'data/LOB/'
+    train_dates = ['0901', '0916', '1001', '1016', '1101']
+    df = pd.DataFrame()
     for date in train_dates:
-        df = parse_data('data/LOB/OrderBookSnapshots_{}_{}.csv'.format(stock, date))
-        df = df.between_time('9:00', '15:00')
-        dfs[date] = df
-    df = pd.concat(dfs.values()).sort_index()
-    train = df
-    test = parse_data('data/LOB/OrderBookSnapshots_{}_{}.csv'.format(stock, train_date))
-    if should_sample:
-        print('len before sub-sampling', len(train), len(test))
-        train = subsample(train)
-        test = subsample(test)
-        print('len after sub-sampling', len(train), len(test))
-    train = prepare_dataframe(train)
-    test = prepare_dataframe(test)
+        if not np.any(df):
+            df = parse_data(data_dir + 'OrderBookSnapshots_{}_{}.csv'.format(stock, date))
+            df = df.between_time('9:00', '15:00')
+        else:
+            dfs = parse_data(data_dir + 'OrderBookSnapshots_{}_{}.csv'.format(stock, date))
+            dfs = dfs.between_time('9:00', '15:00')
+            df = df.append(dfs)
+    
+    df = df.sort_index()
+    df = prepare_dataframe(df)
+    
+    idx = len(df)//5
+    train = df.iloc[idx:len(df)]
+    test = df.iloc[0:idx]
+    if cv:
+        df_cv = train.iloc[len(train)-idx:len(train)]
+        train = train.iloc[0:len(train)-idx]
+        
     print('Training set length for {}: {}'.format(stock, len(train)))
     print('Testing set length for {}: {}'.format(stock, len(test)))
-    return train, test
+    
+    if cv:
+        print('Cross-validation set length for {}: {}'.format(stock, len(df_cv)))
+        return train, df_cv, test
+    else:
+        return train, test
 
 
 def get_bid_price(df: pd.DataFrame, index: int) -> float:
@@ -118,10 +121,10 @@ def sum_sell_active_orders(price: float, df: pd.DataFrame, index: int) -> float:
 
 
 def queue_imbalance(df: pd.DataFrame, index: int):
-    diff_bid_ask = sum_buy_active_orders(get_bid_price(df, index), df, index) - \
-                   sum_sell_active_orders(get_ask_price(df, index), df, index)
-    sum_bid_ask = sum_buy_active_orders(get_bid_price(df, index), df, index) + \
-                  sum_sell_active_orders(get_ask_price(df, index), df, index)
+    sum_buy = sum_buy_active_orders(get_bid_price(df, index), df, index)
+    sum_ask = sum_sell_active_orders(get_ask_price(df, index), df, index)
+    diff_bid_ask = sum_buy - sum_ask
+    sum_bid_ask = sum_buy + sum_ask
     if sum_bid_ask == 0:
         return 0  # as the lists are the same length 0
     return diff_bid_ask / sum_bid_ask
