@@ -11,6 +11,8 @@ import numpy as np
 
 import warnings
 
+from sklearn.metrics import roc_auc_score, roc_curve
+
 warnings.filterwarnings('ignore')
 
 
@@ -203,3 +205,20 @@ def plot_density_imbalance_vs_mid(df, st, end):
     fig, ax = plt.subplots()
     ax.scatter(x, y, c=z, s=50, edgecolor='')
     plt.figure()
+
+
+def plot_roc(df: pd.DataFrame, clf, stock='', title='') -> float:
+    prediction = clf.predict(df['queue_imbalance'].values.reshape(-1, 1))
+
+    roc_score = roc_auc_score(df['mid_price_indicator'], prediction)
+    fpr, tpr, thresholds = roc_curve(df['mid_price_indicator'].values, prediction)
+
+    plt.plot(fpr, tpr, label='{} (area = {})'.format(stock, roc_score))
+    plt.plot([0, 1], [0, 1], 'r--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title(title)
+    plt.legend(loc="lower right")
+    return roc_score
