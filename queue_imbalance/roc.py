@@ -20,7 +20,7 @@ plt.figure()
 for s in stocks:
     try:
         print('for', s)
-        d, d_test = lob.load_data(s, data_dir='data/INDEX/')
+        d, d_test = lob.load_prepared_data(s)
 
         print('performing regressions', s)
         reg = lob.logistic_regression(d, 0, len(d))

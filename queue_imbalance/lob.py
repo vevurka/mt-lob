@@ -1,6 +1,8 @@
+import os
+
 import pandas as pd
 
-from typing import Tuple
+from typing import Tuple, Sequence
 from datetime import datetime
 
 import matplotlib.pyplot as plt
@@ -56,7 +58,33 @@ def parse_data(filename: str) -> pd.DataFrame:
                       index=[p[0] for p in parsed_order_book], columns=['bid', 'ask'])
     return df
 
-def load_data(stock: str, data_dir=None, cv=False) -> Tuple[pd.DataFrame, pd.DataFrame]:
+
+def load_prepared_data(stock: str, data_dir=None, cv=False) -> Sequence[pd.DataFrame]:
+    if data_dir is None:
+        data_dir = 'data/prepared/'
+    df = pd.read_csv(os.path.join(data_dir, stock + '.csv'))
+    return prepare_dataset(stock, df[0:5050], cv=cv)
+
+
+def prepare_dataset(stock:str, df: pd.DataFrame, cv=False) -> Sequence[pd.DataFrame]:
+    idx = len(df) // 5
+    train = df.iloc[idx:len(df)]
+    test = df.iloc[0:idx]
+    if cv:
+        df_cv = train.iloc[len(train) - idx:len(train)]
+        train = train.iloc[0:len(train) - idx]
+
+    print('Training set length for {}: {}'.format(stock, len(train)))
+    print('Testing set length for {}: {}'.format(stock, len(test)))
+
+    if cv:
+        print('Cross-validation set length for {}: {}'.format(stock, len(df_cv)))
+        return train, df_cv, test
+    else:
+        return train, test
+
+
+def load_data(stock: str, data_dir=None, cv=False) ->  Sequence[pd.DataFrame]:
     if data_dir is None:
         data_dir = 'data/LOB/'
     train_dates = ['0901', '0916', '1001', '1016', '1101']
@@ -73,21 +101,7 @@ def load_data(stock: str, data_dir=None, cv=False) -> Tuple[pd.DataFrame, pd.Dat
     df = df.sort_index()
     df = prepare_dataframe(df)
     
-    idx = len(df)//5
-    train = df.iloc[idx:len(df)]
-    test = df.iloc[0:idx]
-    if cv:
-        df_cv = train.iloc[len(train)-idx:len(train)]
-        train = train.iloc[0:len(train)-idx]
-        
-    print('Training set length for {}: {}'.format(stock, len(train)))
-    print('Testing set length for {}: {}'.format(stock, len(test)))
-    
-    if cv:
-        print('Cross-validation set length for {}: {}'.format(stock, len(df_cv)))
-        return train, df_cv, test
-    else:
-        return train, test
+    return prepare_dataset(stock, df, cv=cv)
 
 
 def get_bid_price(df: pd.DataFrame, index: int) -> float:
@@ -207,13 +221,17 @@ def plot_density_imbalance_vs_mid(df, st, end):
     plt.figure()
 
 
-def plot_roc(df: pd.DataFrame, clf, stock='', title='') -> float:
+def plot_roc(df: pd.DataFrame, clf, stock='', title='', c=None, linestyle=None) -> float:
     prediction = clf.predict(df['queue_imbalance'].values.reshape(-1, 1))
 
     roc_score = roc_auc_score(df['mid_price_indicator'], prediction)
     fpr, tpr, thresholds = roc_curve(df['mid_price_indicator'].values, prediction)
 
-    plt.plot(fpr, tpr, label='{} (area = {})'.format(stock, roc_score))
+    if c and linestyle:
+        plt.plot(fpr, tpr, label='{} (area = {})'.format(stock, roc_score), c=c, linestyle=linestyle)
+    else:
+        plt.plot(fpr, tpr, label='{} (area = {})'.format(stock, roc_score))
+
     plt.plot([0, 1], [0, 1], 'r--')
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
