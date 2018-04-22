@@ -22,7 +22,7 @@ class ResultSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Result
-        fields = ('algorithm', 'roc_auc_score')
+        fields = ('algorithm', 'roc_auc_score', 'data_type', 'stock')
 
     def create(self, validated_data):
         svm_data = validated_data.get('algorithm').get('svm')
@@ -34,7 +34,8 @@ class ResultSerializer(serializers.ModelSerializer):
         algorithm_data = validated_data.get('algorithm')
         algorithm = Algorithm(name=algorithm_data.get('name'), svm=svm)
         algorithm.save()
-        result = Result(roc_auc_score=validated_data.get('roc_auc_score'), algorithm=algorithm)
+        result = Result(roc_auc_score=validated_data.get('roc_auc_score'), algorithm=algorithm,
+                        data_type=validated_data.get('data_type'), stock=validated_data.get('stock'))
         result.save()
         print(validated_data)
         return result

@@ -14,5 +14,7 @@ class Algorithm(models.Model):
 
 
 class Result(models.Model):
+    data_type = models.CharField(max_length=32)
+    stock = models.CharField(max_length=32)
     algorithm = models.ForeignKey(Algorithm, on_delete=models.CASCADE)
     roc_auc_score = models.FloatField()
