@@ -11,5 +11,6 @@ def main():
     print(set(list_of_stocks))
     return set(list_of_stocks)
 
+
 if __name__ == '__main__':
     main()

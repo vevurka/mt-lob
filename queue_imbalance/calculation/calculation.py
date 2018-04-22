@@ -6,9 +6,12 @@ from sklearn.svm import SVC
 
 
 class SVMCalculationPerformer(object):
-    def __init__(self, stock, classification: SVC):
+    def __init__(self, stock, classification: SVC, data_length=None):
         self.classification = classification
         self.stock = stock
+        if not data_length:
+            data_length = 0
+        self.data_length = data_length
 
     def prepare_data(self, roc_score, data_type, name=''):
         gamma = self.classification.gamma
@@ -26,7 +29,8 @@ class SVMCalculationPerformer(object):
                 },
                 'roc_auc_score': roc_score,
                 'data_type': data_type,
-                'stock': self.stock
+                'stock': self.stock,
+                'data_length': self.data_length
             }
 
     def execute(self, df: pd.DataFrame, y_true, data_type, name=''):
