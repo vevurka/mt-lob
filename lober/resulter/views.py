@@ -1,4 +1,3 @@
-
 from rest_framework import viewsets
 
 from resulter.models import SVM, Algorithm, Result
