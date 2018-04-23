@@ -1,4 +1,5 @@
 ## Todo
+0. rewrite conclusions for all notebooks with large tick data
 1. stock characteristic describe - separate notebook
 2. how to pick a kernel and params
 3. heat map for rbf kernel params C and gamma
