@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from sklearn import svm
 
-import lob
+from lob_data_utils import lob
 
 stocks = [
     '11399', '2645', '9069', '9063', '9926', '1472', '9094', '9270', '10166', '9061', '2822',
