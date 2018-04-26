@@ -65,9 +65,6 @@ def load_prepared_data(stock: str, data_dir=None, cv=False, length=5050) -> Sequ
     df = pd.read_csv(os.path.join(data_dir, stock + '.csv'))
     print('Len of data for ', stock, 'is', len(df))
     if length:
-        if length >= len(df):
-            print('Not enough data for {} actual len: {}, wanted len: {}'.format(stock, len(df), length))
-            return None, None, None
         return prepare_dataset(stock, df[0:length], cv=cv)
     else:
         return prepare_dataset(stock, df, cv=cv)

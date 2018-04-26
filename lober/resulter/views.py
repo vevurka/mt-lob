@@ -28,7 +28,6 @@ class ResultView(APIView):
         """
         Return a list of all users.
         """
-        print(request.query_params)
         stock = request.query_params.get('stock')
         data_length = request.query_params.get('data-length')
         data_type = request.query_params.get('data-type')
@@ -37,20 +36,24 @@ class ResultView(APIView):
         results = Result.objects.filter(stock=stock)
 
         if data_length:
-            results = Result.objects.filter(data_length=data_length)
+            results = results.filter(data_length=int(data_length))
         if data_type:
-            results = Result.objects.filter(data_type=stock)
+            results = results.filter(data_type=data_type)
         if algorithm == 'svm':
             gamma = request.query_params.get('gamma')
             c = request.query_params.get('c')
             coef0 = request.query_params.get('coef0')
             kernel = request.query_params.get('kernel')
             if gamma:
-                results = Result.objects.filter(algorithm__svm__gamma=gamma)
+                results = results.filter(algorithm__svm__gamma=float(gamma))
             if c:
-                results = Result.objects.filter(algorithm__svm__c=c)
+                results = results.filter(algorithm__svm__c=float(c))
             if coef0:
-                results = Result.objects.filter(algorithm__svm__coef0=coef0)
+                results = results.filter(algorithm__svm__coef0=float(coef0))
             if kernel:
-                results = Result.objects.filter(algorithm__svm__kernel=kernel)
+                results = results.filter(algorithm__svm__kernel=kernel)
+        else:
+            print('not found')
+            return Response(status=404)
+        print('returning response')
         return Response(ListSerializer(results.all(), child=ResultSerializer()).data)
