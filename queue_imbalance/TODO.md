@@ -1,3 +1,11 @@
+# TODO
+
+1. pick parameters for these 20 stocks with 5050 data separately - check the length of that data
+2. apply these parameters to all other stocks
+3. compare WITH LOGISTIC RES for the same data - cv?
+4. plot data amount diff with results fior the worst for 5050
+5. put kernel to the clustering stuff 
+
 ## Todo
 0. rewrite conclusions for all notebooks with large tick data
 1. stock characteristic describe - separate notebook

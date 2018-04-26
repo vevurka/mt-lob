@@ -21,7 +21,7 @@ plt.figure()
 for s in stocks:
     try:
         print('for', s)
-        d, d_cv, d_test = lob.load_prepared_data(s, data_dir='../data/prepared/', cv=True, length=None)
+        d, d_cv, d_test = lob.load_prepared_data(s, data_dir='data/prepared/', cv=True, length=10000)
 
         print('performing regressions', s)
         reg = lob.logistic_regression(d, 0, len(d))
@@ -31,11 +31,11 @@ for s in stocks:
         rocs_areas[s] = score
         print('{} (area = {})'.format(s, score))
         i += 1
-        if i % 10 == 0:
-            plt.savefig('plots_cv_{}.png'.format(i))
-            plt.figure()
+        # if i % 10 == 0:
+        #     plt.savefig('plots_cv_{}.png'.format(i))
+        #     plt.figure()
     except Exception as e:
         print('Exception for ', s, e)
 
-plt.savefig('plots_{}.png'.format(i))
+# plt.savefig('plots_{}.png'.format(i))
 print(rocs_areas)
