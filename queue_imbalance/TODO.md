@@ -1,4 +1,8 @@
 # TODO
+0. run on test!
+
+0. learning curve, check the params for different data lengths
+1. validation curve 
 
 1. pick parameters for these 20 stocks with 5050 data separately - check the length of that data
 2. apply these parameters to all other stocks
