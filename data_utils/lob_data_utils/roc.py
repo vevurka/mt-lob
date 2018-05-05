@@ -16,12 +16,14 @@ stocks = [
 
 
 i = 0
+data_length = 5050
 rocs_areas = {}
 plt.figure()
 for s in stocks:
     try:
         print('for', s)
-        d, d_cv, d_test = lob.load_prepared_data(s, data_dir='data/prepared/', cv=True, length=10000)
+        d, d_cv, d_test = lob.load_prepared_data(s, data_dir='../queue_imbalance/data/prepared/',
+                                                 cv=True, length=data_length)
 
         print('performing regressions', s)
         reg = lob.logistic_regression(d, 0, len(d))

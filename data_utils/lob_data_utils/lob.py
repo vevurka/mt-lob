@@ -7,13 +7,16 @@ from datetime import datetime
 
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
-from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
+from sklearn.linear_model import LogisticRegressionCV
+from sklearn.model_selection import learning_curve
 from sklearn import svm
 import numpy as np
 
 import warnings
 
 from sklearn.metrics import roc_auc_score, roc_curve
+
+from lob_data_utils import db_result
 
 warnings.filterwarnings('ignore')
 
@@ -63,10 +66,10 @@ def load_prepared_data(stock: str, data_dir=None, cv=False, length=5050) -> Sequ
     if data_dir is None:
         data_dir = 'data/prepared/'
     df = pd.read_csv(os.path.join(data_dir, stock + '.csv'))
-    print('Len of data for ', stock, 'is', len(df))
+    # print('Len of data for ', stock, 'is', len(df))
     if length:
         if length >= len(df):
-            print('Not enough data for {} actual len: {}, wanted len: {}'.format(stock, len(df), length))
+            # print('Not enough data for {} actual len: {}, wanted len: {}'.format(stock, len(df), length))
             return None, None, None
         return prepare_dataset(stock, df[0:length], cv=cv)
     else:
@@ -81,11 +84,11 @@ def prepare_dataset(stock:str, df: pd.DataFrame, cv=False) -> Sequence[pd.DataFr
         df_cv = train.iloc[len(train) - idx:len(train)]
         train = train.iloc[0:len(train) - idx]
 
-    print('Training set length for {}: {}'.format(stock, len(train)))
-    print('Testing set length for {}: {}'.format(stock, len(test)))
+    # print('Training set length for {}: {}'.format(stock, len(train)))
+    # print('Testing set length for {}: {}'.format(stock, len(test)))
 
     if cv:
-        print('Cross-validation set length for {}: {}'.format(stock, len(df_cv)))
+        # print('Cross-validation set length for {}: {}'.format(stock, len(df_cv)))
         return train, df_cv, test
     else:
         return train, test
@@ -247,3 +250,135 @@ def plot_roc(df: pd.DataFrame, clf, stock='', title='', c=None, linestyle=None) 
     plt.title(title)
     plt.legend(loc="lower right")
     return roc_score
+
+
+def plot_roc_proba(df: pd.DataFrame, clf, stock='', title='', c=None, linestyle=None) -> float:
+    prediction = clf.predict_proba(df['queue_imbalance'].values.reshape(-1, 1))[:, 1]
+
+    roc_score = roc_auc_score(df['mid_price_indicator'], prediction)
+    fpr, tpr, thresholds = roc_curve(df['mid_price_indicator'].values, prediction)
+
+    if c and linestyle:
+        plt.plot(fpr, tpr, label='{} (area = {})'.format(stock, roc_score), c=c, linestyle=linestyle)
+    else:
+        plt.plot(fpr, tpr, label='{} (area = {})'.format(stock, roc_score))
+
+    plt.plot([0, 1], [0, 1], 'r--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title(title)
+    plt.legend(loc="lower right")
+    return roc_score
+
+
+def plot_learning_curve(estimator, X, y, ylim=None, cv=None,
+                        n_jobs=1, train_sizes=np.linspace(.1, 1.0, 5), title=''):
+    train_sizes, train_scores, test_scores = learning_curve(
+        estimator, X, y, cv=cv, n_jobs=n_jobs, train_sizes=train_sizes)
+    train_scores_mean = np.mean(train_scores, axis=1)
+    train_scores_std = np.std(train_scores, axis=1)
+    test_scores_mean = np.mean(test_scores, axis=1)
+    test_scores_std = np.std(test_scores, axis=1)
+    plt.grid()
+
+    plt.fill_between(train_sizes, train_scores_mean - train_scores_std,
+                     train_scores_mean + train_scores_std, alpha=0.1,
+                     color="r")
+    plt.fill_between(train_sizes, test_scores_mean - test_scores_std,
+                     test_scores_mean + test_scores_std, alpha=0.1, color="g")
+    plt.plot(train_sizes, train_scores_mean, 'o-', color="r",
+             label="Training score")
+    plt.plot(train_sizes, test_scores_mean, 'o-', color="g",
+             label="Cross-validation score")
+
+    plt.legend(loc="best")
+    plt.title(title)
+    if ylim is not None:
+        plt.ylim(*ylim)
+    plt.xlabel("Training examples")
+    plt.ylabel("Score")
+
+
+def prepare_summary(stocks, dfs):
+    df_summary = pd.DataFrame(index=stocks)
+    sum_sell_ask_mean = []
+    sum_buy_bid_mean = []
+    max_trade_price = []
+    min_trade_price = []
+    bid_ask_spread = []
+    bid_len = []
+    ask_len = []
+    mean_bid_ask_len = []
+    mean_bid_len = []
+    mean_ask_len = []
+
+    for s in stocks:
+        sum_sell_ask_mean.append(dfs[s]['sum_sell_ask'].mean())
+        sum_buy_bid_mean.append(dfs[s]['sum_buy_bid'].mean())
+        max_trade_price.append(max(dfs[s]['bid_price'].max(), dfs[s]['ask_price'].max()))
+        min_trade_price.append(max(dfs[s]['bid_price'].min(), dfs[s]['ask_price'].min()))
+        bid_ask_spread.append((dfs[s]['ask_price'] - dfs[s]['bid_price']).mean())
+
+        max_len_bid = 0
+        max_len_ask = 0
+
+        for i, row in dfs[s].iterrows():
+            if len(row['bid']) > max_len_bid:
+                max_len_bid = len(row['bid'])
+            if len(row['ask']) > max_len_ask:
+                max_len_ask = len(row['ask'])
+        bid_len.append(max_len_bid)
+        ask_len.append(max_len_ask)
+
+        sum_len_bid_ask = 0
+        sum_len_bid = 0
+        sum_len_ask = 0
+        for i, row in dfs[s].iterrows():
+            sum_len_bid_ask += (len(row['ask']) + len(row['bid']))
+            sum_len_bid += len(row['bid'])
+            sum_len_ask += len(row['ask'])
+        mean_bid_ask_len.append(sum_len_bid_ask / (2 * len(dfs[s])))
+        mean_bid_len.append(sum_len_bid / len(dfs[s]))
+        mean_ask_len.append(sum_len_ask / len(dfs[s]))
+    df_summary['sum_sell_ask_mean'] = sum_sell_ask_mean
+    df_summary['sum_buy_bid_mean'] = sum_buy_bid_mean
+    df_summary['max_trade_price'] = max_trade_price
+    df_summary['min_trade_price'] = min_trade_price
+    df_summary['bid_ask_spread'] = bid_ask_spread
+    df_summary['max_len_ask'] = ask_len
+    df_summary['max_len_bid'] = bid_len
+    df_summary['mean_bid_ask_len'] = mean_bid_ask_len
+    df_summary['mean_bid_len'] = mean_bid_len
+    df_summary['mean_ask_len'] = mean_ask_len
+    return df_summary
+
+
+def get_data_for_data_length(data_length, data_type='cv'):
+    df_res_cv = pd.DataFrame(db_result.get_svm_results_for_data_length(data_length, data_type))
+
+    dfs = {}
+    dfs_test = {}
+    dfs_cv = {}
+
+    stocks = df_res_cv['stock'].unique()
+
+    for s in stocks:
+        d, d_cv, d_test = load_prepared_data(s, cv=True, length=data_length)
+        dfs[s] = d
+        dfs_test[s] = d_test
+
+    df_res_cv.drop('algorithm_id', axis=1, inplace=True)
+    df_res_cv.drop('svm_id', axis=1, inplace=True)
+    df_res_cv.drop('id', axis=1, inplace=True)
+    df_res_cv.drop('data_length', axis=1, inplace=True)
+    df_res_cv.drop('name', axis=1, inplace=True)
+    df_res_cv.drop('data_type', axis=1, inplace=True)
+    df_res_cv.head()
+
+    df_best_agg = df_res_cv.groupby('stock', as_index=False)['roc_auc_score'].idxmax()
+    df_bests = df_res_cv.loc[df_best_agg]
+    df_bests.index = df_bests['stock']
+    del df_res_cv
+    return (dfs, dfs_cv, dfs_test), df_bests
