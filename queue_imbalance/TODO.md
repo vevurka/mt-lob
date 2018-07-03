@@ -1,3 +1,57 @@
+# TODO
+
+## GDF
+
+
+What is my goal? I want to say that this approach is better than others.
+Let's find the best params for the one stock.
+
+
+
+What I want to say about this approach?
+* hard to find a proper parameters and hyperparamaters
+* it's prone to overfitting
+
+## Notes
+
+* 20 features - s=0.1, r=0.03
+* 4 features - s = 0.1, r=0.02
+* 10 features - s = 0.1, r=0.09 or r = 0.1
+
+* relevant are 20 features, 50 features, 10 features middle, 4 features middle
+
+
+
+### TODO:
+
+1. prepare summing up notebook with different numbers of features
+0. feature relevance
+1. sum up the apporach of choosing r and s (looking at distributions or by just looking at not worse
+stock number for each group of params)
+2. present results on training dataset and testing for findings instead of random stuff
+5. pick the best params and calculate on test set, compare with previous approaches
+(get the logistic regression)
+
+### In progress
+1. compare different s, r params for different number of features
+
+
+
+
+### Nice to have
+3. compare different Ks
+0. I want to have this plot with s, r and gdf
+
+
+### DONE
+4. calculate for 23-27, 20-30 or maybe do not
+5. Let's pick two stocks first and try to find the best parameters
+4. plot heatmap s vs r
+0. does r have any meaning at all!? - no, and s works the best as 0.1
+2. write sensible description of the approach
+
+## SVM
+
 kernel_choice: goal is to group stocks so they have "similar" results
 kernel_choice_10000
 kernel_choice_15000

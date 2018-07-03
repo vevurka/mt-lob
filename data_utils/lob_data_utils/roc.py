@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 
-import lob
+from lob_data_utils import lob
 
 stocks = [
     '11399', '2645', '9069', '9063', '9926', '1472', '9094', '9270', '10166', '9061', '2822',
@@ -16,7 +16,7 @@ stocks = [
 
 
 i = 0
-data_length = 5050
+data_length = 10000
 rocs_areas = {}
 plt.figure()
 for s in stocks:
@@ -29,7 +29,7 @@ for s in stocks:
         reg = lob.logistic_regression(d, 0, len(d))
 
         print('performing predictions', s)
-        score = lob.plot_roc(d_cv, reg, stock=s)
+        score = lob.plot_roc(d_test, reg, stock=s)
         rocs_areas[s] = score
         print('{} (area = {})'.format(s, score))
         i += 1
