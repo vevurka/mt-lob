@@ -36,7 +36,15 @@ class SVMCalculationPerformer(object):
     def execute(self, df: pd.DataFrame, y_true, data_type, name=''):
         prediction = self.classification.predict(df)
         score = roc_auc_score(y_true, prediction)
+        return score
+
+    def execute_and_save(self, df: pd.DataFrame, y_true, data_type, name=''):  # TODO: use it
+        prediction = self.classification.predict(df)
+        score = roc_auc_score(y_true, prediction)
         data = self.prepare_data(score, data_type, name=name)
-        r = requests.post('http://localhost:8000/result/', json=data)
-        print(r.json())
-        return r.json()
+        try:
+            r = requests.post('http://localhost:8000/result/', json=data)
+            print(r.json())
+            return r.json()
+        except Exception as e:
+            print('Could not save', e)

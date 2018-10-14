@@ -1,8 +1,8 @@
 import pandas as pd
+from lob_data_utils.svm_calculation.calculation import SVMCalculationPerformer
+
 from sklearn.svm import SVC
 import requests
-
-from calculation.calculation import SVMCalculationPerformer
 
 
 class SVM(object):
