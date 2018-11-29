@@ -7,7 +7,7 @@ from datetime import datetime
 
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
-from sklearn.linear_model import LogisticRegressionCV
+from sklearn.linear_model import LogisticRegressionCV, LinearRegression
 from sklearn.model_selection import learning_curve
 from sklearn import svm
 import numpy as np
@@ -62,22 +62,23 @@ def parse_data(filename: str) -> pd.DataFrame:
     return df
 
 
-def load_prepared_data(stock: str, data_dir=None, cv=False, length=5050) -> Sequence[pd.DataFrame]:
+def load_prepared_data(stock: str, data_dir=None, cv=False, length=5050, include_test=True) -> Sequence[pd.DataFrame]:
     if data_dir is None:
         data_dir = 'data/prepared/'
     df = pd.read_csv(os.path.join(data_dir, stock + '.csv'))
+
     # print('Len of data for ', stock, 'is', len(df))
     if length:
         if length > len(df):
             # print('Not enough data for {} actual len: {},
             # wanted len: {}'.format(stock, len(df), length))
             return None, None, None
-        return prepare_dataset(stock, df[0:length], cv=cv)
+        return prepare_dataset(stock, df[0:length], cv=cv, include_test=include_test)
     else:
-        return prepare_dataset(stock, df, cv=cv)
+        return prepare_dataset(stock, df, cv=cv, include_test=include_test)
 
 
-def prepare_dataset(stock:str, df: pd.DataFrame, cv=False) -> Sequence[pd.DataFrame]:
+def prepare_dataset(stock: str, df: pd.DataFrame, cv=False, include_test=True) -> Sequence[pd.DataFrame]:
     idx = len(df) // 5
     train = df.iloc[idx:len(df)]
     test = df.iloc[0:idx]
@@ -91,42 +92,67 @@ def prepare_dataset(stock:str, df: pd.DataFrame, cv=False) -> Sequence[pd.DataFr
     if cv:
         # print('Cross-validation set length for {}: {}'.format(stock, len(df_cv)))
         return train, df_cv, test
-    else:
+    elif include_test:
         return train, test
+    else:
+        #print('no test or train')
+        return df
 
 
-def load_data(stock: str, data_dir=None, cv=False) ->  Sequence[pd.DataFrame]:
+def load_data(stock: str, data_dir=None, cv=False, include_test=True, should_add_mid_avg=False) -> Sequence[pd.DataFrame]:
     if data_dir is None:
         data_dir = 'data/LOB/'
     train_dates = ['0901', '0916', '1001', '1016', '1101']
     df = pd.DataFrame()
     for date in train_dates:
-        if not np.any(df):
-            df = parse_data(data_dir + 'OrderBookSnapshots_{}_{}.csv'.format(stock, date))
-            df = df.between_time('9:00', '15:00')
-        else:
-            dfs = parse_data(data_dir + 'OrderBookSnapshots_{}_{}.csv'.format(stock, date))
-            dfs = dfs.between_time('9:00', '15:00')
-            df = df.append(dfs)
-    
+        print(date)
+        dfs = parse_data(data_dir + 'OrderBookSnapshots_{}_{}.csv'.format(stock, date))
+        dfs = dfs.between_time('9:00', '15:00')
+        df = df.append(dfs)
+    print('finished parsing')
     df = df.sort_index()
-    df = prepare_dataframe(df)
+    df = df.reindex()
+    df = prepare_dataframe(df, should_add_mid_avg=should_add_mid_avg)
     
-    return prepare_dataset(stock, df, cv=cv)
+    return prepare_dataset(stock, df, cv=cv, include_test=include_test)
 
 
 def get_bid_price(df: pd.DataFrame, index: int) -> float:
     bid_list = df['bid'][index]
     if not np.any(bid_list):
         return 0
-    return max([price for price, vol in bid_list])
+    return np.max([price for price, vol in bid_list])
 
 
 def get_ask_price(df: pd.DataFrame, index: int) -> float:
     ask_list = df['ask'][index]
     if not np.any(ask_list):
         return 0
-    return min([price for price, vol in ask_list])
+    return np.min([price for price, vol in ask_list])
+
+
+def add_prev_mid_price_avg(df: pd.DataFrame, k=10) -> pd.DataFrame:
+    print('adding prev mid', k)
+    previous_mid_prices = []
+    for i in range(len(df)):
+        if i < k:
+            previous_mid_prices.append(None)
+        else:
+            previous_mid_prices.append(np.sum(df.iloc[i-k:i]['mid_price'])/k)
+    df['prev_mid_price_avg_{}'.format(k)] = previous_mid_prices
+    return df
+
+
+def add_next_mid_price_avg(df: pd.DataFrame, k=10) -> pd.DataFrame:
+    print('adding next mid', k)
+    previous_mid_prices = []
+    for i in range(len(df)):
+        if i > len(df) - k - 1:
+            previous_mid_prices.append(None)
+        else:
+            previous_mid_prices.append(np.sum(df.iloc[i:i+k]['mid_price'])/k)
+    df['next_mid_price_avg_{}'.format(k)] = previous_mid_prices
+    return df
 
 
 def get_mid_price(df: pd.DataFrame, index: int) -> float:
@@ -165,7 +191,25 @@ def add_mid_price_indicator(df: pd.DataFrame) -> pd.DataFrame:
         y.append(int(future_mid_price > current_mid_price))
         current_mid_price = future_mid_price
     df['mid_price_indicator'] = y + [None]
-    df = df.dropna()
+    return df
+
+
+def add_mid_price_avg_indicator(df: pd.DataFrame, k=10, alpha=0.0) -> pd.DataFrame:
+    # TODO: what is alpha
+    prev_col_name = 'prev_mid_price_avg_{}'.format(k)
+    next_col_name = 'next_mid_price_avg_{}'.format(k)
+    if prev_col_name not in df.columns or next_col_name not in df.columns:
+        print(prev_col_name, next_col_name, 'not in dataframe')
+        return df
+    mid_price_avg_inds = []
+    for i, row in df.iterrows():
+        if row[next_col_name] > row[prev_col_name]: #* (1 + alpha):
+            mid_price_avg_inds.append(1)
+        else:
+            mid_price_avg_inds.append(0)
+        # else:
+        #     mid_price_avg_inds.append(0)
+    df['mid_price_avg_indicator_{}'.format(k)] = mid_price_avg_inds
     return df
 
 
@@ -177,7 +221,7 @@ def add_queue_imbalance(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def prepare_dataframe(df):
+def prepare_dataframe(df, should_add_mid_avg=False):
     df['bid_price'] = [get_bid_price(df, i) for i in range(len(df))]
     df['ask_price'] = [get_ask_price(df, i) for i in range(len(df))]
     df['mid_price'] = [get_mid_price(df, i) for i in range(len(df))]
@@ -185,7 +229,16 @@ def prepare_dataframe(df):
                           range(len(df))]
     df['sum_buy_bid'] = [sum_buy_active_orders(get_bid_price(df, i), df, i) for i in
                          range(len(df))]
+    if should_add_mid_avg:
+        ks = [2, 5, 10, 20, 50]
+        for k in ks:
+            df = add_next_mid_price_avg(df, k=k)
+            df = add_prev_mid_price_avg(df, k=k)
+            df = add_mid_price_avg_indicator(df, k=k) # TODO: alpha is removed
+            # TODO: alpha could be 0.75 quantile or mid price changes
+
     rows_to_remove = []
+    print('prepare for row removal')
     for i in range(len(df) - 1, 0, -1):
         if df['mid_price'].iloc[i] == df['mid_price'].iloc[i - 1]:
             rows_to_remove.append(i)
@@ -220,7 +273,7 @@ def sigmoid(x):
 def plot_density_imbalance_vs_mid(df, st, end):    
     y = df['queue_imbalance'].iloc[st:end].values
     x = df['mid_price'].iloc[st:end].values
-    xy = np.vstack([x,y])
+    xy = np.vstack([x, y])
     z = gaussian_kde(xy)(xy)
 
     # that most dense points are plotted last
@@ -232,24 +285,39 @@ def plot_density_imbalance_vs_mid(df, st, end):
     plt.figure()
 
 
-def plot_roc(df: pd.DataFrame, clf, stock='', title='', c=None, linestyle=None) -> float:
+def plot_roc(df: pd.DataFrame, clf, stock='', title='', c=None, linestyle=None,
+             label=None, alpha=None, ax=None) -> float:
     prediction = clf.predict(df['queue_imbalance'].values.reshape(-1, 1))
 
     roc_score = roc_auc_score(df['mid_price_indicator'], prediction)
     fpr, tpr, thresholds = roc_curve(df['mid_price_indicator'].values, prediction)
-
-    if c and linestyle:
-        plt.plot(fpr, tpr, label='{} (area = {})'.format(stock, roc_score), c=c, linestyle=linestyle)
+    kwargs = {'linestyle': linestyle, 'c': c, 'label': label, 'alpha': alpha}
+    non_empty_kwargs = {}
+    for k, v in kwargs.items():
+        if v is not None:
+            non_empty_kwargs[k] = v
+    if non_empty_kwargs['label'] is None:
+        non_empty_kwargs['label'] = ''
+    non_empty_kwargs['label'] = ' '.join(
+        [non_empty_kwargs['label'], '{} (area = {:.4f})'.format(stock, roc_score)])
+    if ax:
+        ax.plot(fpr, tpr, **non_empty_kwargs)
+        ax.plot([0, 1], [0, 1], 'r--')
+        ax.set_xlim([0.0, 1.0])
+        ax.set_ylim([0.0, 1.05])
+        ax.set_xlabel('False Positive Rate')
+        ax.set_ylabel('True Positive Rate')
+        ax.set_title(title)
+        ax.legend(loc="lower right")
     else:
-        plt.plot(fpr, tpr, label='{} (area = {})'.format(stock, roc_score))
-
-    plt.plot([0, 1], [0, 1], 'r--')
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title(title)
-    plt.legend(loc="lower right")
+        plt.plot(fpr, tpr, **non_empty_kwargs)
+        plt.plot([0, 1], [0, 1], 'r--')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title(title)
+        plt.legend(loc="lower right")
     return roc_score
 
 
@@ -275,31 +343,52 @@ def plot_roc_proba(df: pd.DataFrame, clf, stock='', title='', c=None, linestyle=
 
 
 def plot_learning_curve(estimator, X, y, ylim=None, cv=None,
-                        n_jobs=1, train_sizes=np.linspace(.1, 1.0, 5), title=''):
+                        n_jobs=1, train_sizes=np.linspace(.1, 1.0, 5), title='', ax=None,
+                        scoring='roc_auc'):
     train_sizes, train_scores, test_scores = learning_curve(
-        estimator, X, y, cv=cv, n_jobs=n_jobs, train_sizes=train_sizes)
+        estimator, X, y, cv=cv, n_jobs=n_jobs, train_sizes=train_sizes, scoring=scoring)
     train_scores_mean = np.mean(train_scores, axis=1)
     train_scores_std = np.std(train_scores, axis=1)
     test_scores_mean = np.mean(test_scores, axis=1)
     test_scores_std = np.std(test_scores, axis=1)
-    plt.grid()
+    if ax:
+        ax.grid()
 
-    plt.fill_between(train_sizes, train_scores_mean - train_scores_std,
-                     train_scores_mean + train_scores_std, alpha=0.1,
-                     color="r")
-    plt.fill_between(train_sizes, test_scores_mean - test_scores_std,
-                     test_scores_mean + test_scores_std, alpha=0.1, color="g")
-    plt.plot(train_sizes, train_scores_mean, 'o-', color="r",
-             label="Training score")
-    plt.plot(train_sizes, test_scores_mean, 'o-', color="g",
-             label="Cross-validation score")
+        ax.fill_between(train_sizes, train_scores_mean - train_scores_std,
+                        train_scores_mean + train_scores_std, alpha=0.1,
+                         color="r")
+        ax.fill_between(train_sizes, test_scores_mean - test_scores_std,
+                        test_scores_mean + test_scores_std, alpha=0.1, color="g")
+        ax.plot(train_sizes, train_scores_mean, 'o-', color="r",
+                label="Training score")
+        ax.plot(train_sizes, test_scores_mean, 'o-', color="g",
+                label="Validation score")
 
-    plt.legend(loc="best")
-    plt.title(title)
-    if ylim is not None:
-        plt.ylim(*ylim)
-    plt.xlabel("Training examples")
-    plt.ylabel("Score")
+        ax.legend(loc="best")
+        ax.set_title(title)
+        if ylim is not None:
+            ax.set_ylim(*ylim)
+        ax.set_xlabel("Training examples")
+        ax.set_ylabel("Score")
+    else:
+        plt.grid()
+    
+        plt.fill_between(train_sizes, train_scores_mean - train_scores_std,
+                         train_scores_mean + train_scores_std, alpha=0.1,
+                         color="r")
+        plt.fill_between(train_sizes, test_scores_mean - test_scores_std,
+                         test_scores_mean + test_scores_std, alpha=0.1, color="g")
+        plt.plot(train_sizes, train_scores_mean, 'o-', color="r",
+                 label="Training score")
+        plt.plot(train_sizes, test_scores_mean, 'o-', color="g",
+                 label="Cross-validation score")
+    
+        plt.legend(loc="best")
+        plt.title(title)
+        if ylim is not None:
+            plt.ylim(*ylim)
+        plt.xlabel("Training examples")
+        plt.ylabel("Score")
 
 
 def prepare_summary(stocks, dfs):
