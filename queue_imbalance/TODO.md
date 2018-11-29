@@ -1,5 +1,63 @@
 # TODO
 
+## States
+
+1. wziac states.pdf
+2. poklasyfikowac sobie opisane tam stany
+3. zaimplementowac mdp
+4. wziac queue imbalance jako stan
+
+
+
+0. zrobic tabelke jak na str 10
+1. wykres of distribution of i zbiorczy
+
+
+1. tick size
+0. wald test
+1. likelihood test
+
+3. check what the heck with density
+4. do the same stuff for every notebook
+
+5. sampling
+
+
+1. Learn data-mining
+2. Understand the problem
+3. What do we want to classify?
+
+4. Implement Queue paper.
+
+
+## Questions
+
+1. How to test this?
+
+ logistyczna regresja ma sens (Wald test i likelihood test) 
+ - chciałabym powtórzyć te testy dla naszych danych. 
+ Dodatkowo po tym jak zrobiłam lepsze wykresy gęstości queue imbalance versus mid price 
+ zauważyłam parę dziwnych rzeczy (np. więcej niż jedno "maksimum gęstości"),
+  które chcę spróbować zbadać dokładniej biorąc pod uwagę przyszłość i przeszłość tych akcji
+
+
+
+
+1. historical mid prices - clustering or classification even
+3. states thingy?
+0. add description of scaling to gdf in mgr
+
+
+## Writting
+
+0. What is my plan?
+- what data did I use?
+- what did I actually do?
+- why I did that?
+
+1. change to chapters
+
+
 ## GDF
 
 
