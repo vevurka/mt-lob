@@ -7,6 +7,8 @@ import numpy as np
 
 from scipy.stats import norm
 
+from lob_data_utils.roc_results import results_15000
+
 
 def gdf_representation(buy_orders, sell_orders, gdf):
     buy_price, buy_volume = buy_orders
@@ -28,17 +30,24 @@ def transform_to_orders(df: pd.DataFrame, gdfs, K) -> pd.DataFrame:
         try:
             d_bid = np.array([literal_eval(row.get('bid_norm'))][0])
             d_ask = np.array([literal_eval(row.get('ask_norm'))][0])
+
+            d_bid_prices = d_bid[:, 0]
+            d_ask_prices = d_ask[:, 0]
+            d_bid_volumes = d_bid[:, 1]
+            d_ask_volumes = d_ask[:, 1]
         except Exception as e:
-            print(row.get('bid_norm'), idx)
+            print(e)
             raise e
         new_row_dict = {}
         for i in range(0, K):
-            gdf_repr = gdf_representation((d_bid[:, 0], d_bid[:, 1]),
-                                          (d_ask[:, 0], d_ask[:, 1]),
+            gdf_repr = gdf_representation((d_bid_prices, d_bid_volumes),
+                                          (d_ask_prices, d_ask_volumes),
                                           gdfs[i, :])
             new_row_dict['gdf_' + str(i)] = gdf_repr
         new_row_dict['mid_price'] = row.get('mid_price')
         new_row_dict['mid_price_indicator'] = row.get('mid_price_indicator')
+        new_row_dict['datetime'] = row.get('datetime')
+        new_row_dict['queue_imbalance'] = row.get('queue_imbalance')
 
         order_list.append(new_row_dict)
     order_df = pd.DataFrame(order_list)
@@ -46,15 +55,16 @@ def transform_to_orders(df: pd.DataFrame, gdfs, K) -> pd.DataFrame:
 
 
 def main(stock):
-    rr = [0.01, 0.05, 0.1, 0.5, 1.0]
-    ss = [0.01, 0.05, 0.1, 0.5, 1.0]
+    data_dir_in = 'data_gdf_whole'
+    data_dir_out = 'data_gdf_whole'
+    rr = [0.1, 1.0]
+    ss = [0.1, 1.0]
     print(stock, datetime.now().isoformat())
     for r in rr:
         for s in ss:
             K = 50
-            length = 15000
-            filename = 'gdf_{}_len{}_r{}_s{}_K{}.csv'.format(stock, length, r, s, K)
-            if os.path.exists(os.path.join('data_gdf/', filename)):
+            filename = 'gdf_{}_r{}_s{}_K{}.csv'.format(stock, r, s, K)
+            if os.path.exists(os.path.join(data_dir_out, filename)):
                 print('already exists ', filename, datetime.now().isoformat())
                 continue
 
@@ -66,17 +76,17 @@ def main(stock):
             print('preparing', filename, datetime.now().isoformat())
 
             df = pd.read_csv(
-                os.path.join('data_gdf/', stock + '_len{}.csv'.format(length)))
+                os.path.join(data_dir_in, stock + '_normalized.csv'))
             df = transform_to_orders(df, gdfs, K)
             print('writing', filename, len(df), datetime.now().isoformat())
-            df.to_csv(os.path.join('data_gdf/', filename))
+            df.to_csv(os.path.join(data_dir_out, filename))
     return True
 
 
 if __name__ == "__main__":
     from multiprocessing import Pool
-   # stocks = list(results_10000.keys())
-    stocks = ['9061', '9064', '9265']
+    stocks = list(results_15000.keys())
+
     pool = Pool(processes=5)
 
     res = [pool.apply_async(main, [s]) for s in stocks]
