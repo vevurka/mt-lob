@@ -14,7 +14,7 @@ import numpy as np
 
 import warnings
 
-from sklearn.metrics import roc_auc_score, roc_curve
+from sklearn.metrics import roc_auc_score, roc_curve, f1_score, precision_recall_curve
 
 from lob_data_utils import db_result
 
@@ -283,6 +283,43 @@ def plot_density_imbalance_vs_mid(df, st, end):
     fig, ax = plt.subplots()
     ax.scatter(x, y, c=z, s=50, edgecolor='')
     plt.figure()
+
+
+def plot_f1(df: pd.DataFrame, clf, stock='', title='', c=None, linestyle=None,
+             label=None, alpha=None, ax=None, features=None) -> float:
+    if not features:
+        prediction = clf.predict(df['queue_imbalance'].values.reshape(-1, 1))
+    else:
+        prediction = clf.predict(df[features])
+    f1 = f1_score(df['mid_price_indicator'], prediction)
+    precision, recall, thresholds = precision_recall_curve(df['mid_price_indicator'].values, prediction)
+    kwargs = {'linestyle': linestyle, 'c': c, 'label': label, 'alpha': alpha}
+    non_empty_kwargs = {}
+    for k, v in kwargs.items():
+        if v is not None:
+            non_empty_kwargs[k] = v
+    if non_empty_kwargs['label'] is None:
+        non_empty_kwargs['label'] = ''
+    non_empty_kwargs['label'] = ' '.join(
+        [non_empty_kwargs['label'], '{} (f1 score = {:.4f})'.format(stock, f1)])
+    if not ax:
+        f, ax = plt.subplots(1, 1)
+    f_scores = np.linspace(0.2, 0.8, num=4)
+    for f_score in f_scores:
+        x = np.linspace(0.01, 1)
+        y = f_score * x / (2 * x - f_score)
+        l, = ax.plot(x[y >= 0], y[y >= 0], color='gray', alpha=0.1)
+        ax.annotate('f1={0:0.1f}'.format(f_score), xy=(0.9, y[45] + 0.02))
+    if ax:
+        ax.step(recall, precision, alpha=0.5, where='post',  lw=2, **non_empty_kwargs)
+        ax.set_xlim([0.0, 1.0])
+        ax.set_ylim([0.0, 1.05])
+        ax.set_xlabel('Recall')
+        ax.set_ylabel('Precision')
+        ax.set_title(title)
+        ax.legend(loc="best")
+
+    return f1
 
 
 def plot_roc(df: pd.DataFrame, clf, stock='', title='', c=None, linestyle=None,
