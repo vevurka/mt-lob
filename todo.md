@@ -1,58 +1,49 @@
 # TODO
 
-1. z-score for lob normalization in gdf approach (the previous one is wrong because it is on past data)
-2. different stds for gaussian in gdf
-
-3. Read Benchmark Dataset for Mid-Price Forecasting  [6]
-
-2. Use cross-validation from with more folds [6]
-
-1. run gdf_param_search, but fix checking if file exist
 
 
-0. pick 3 stocks for case study (with 15000 data points): 9064 (<100), 9061 (682), 9265 (> 3000)
-(mid-price means)
+0. pca_gdf_que3 train svms (I've choosen small r big s because that was the best feature for these)
+1. sigmoid kernel?
+1. what if we take pca from smaller range of gdf
+0. what are coefs for gdf_0-50_que_prev
+1. test logistic regression for the pca approach
+1. check what is actually picked by pca... - think about visualizations
+0. differences between gdfs (regarding params r s )
+2. fix overview notebooks for svm and logistic for queue_imb (4 notebooks) for the list return from data_utils.model
+5. copy results from random/more_queue* notebooks to overview after calculation is done
+7. C parameter for logistic regression
 
+
+## TODO mgr
+0. rewrite part about validation 10 anchored forward validation
+1. rewrite results with new validation and scoring for logistic regression in mgr
+0. check plots in results for logistic in mgr
+0. check plots in results for svm in mgr
+1. rewrite results with new validation and scoring for svm in mgr
+3. Describe Benchmark Dataset for Mid-Price Forecasting  [6]
 11. read Mid-price Prediction Based on Machine Learning Methods [5]
-
-
 0. Describe plots in Case Study chapter in mgr
-
-1. What about other comparision metrics - recall, precision, accuracy
-
-0. test approach with k-means mid-prices: 
-    * what is the k?
-    * is the k values same across stocks?
-    * what decides about best k-value?
-    * what about normalization
-        - this is hard issue with that  
-        
-
 10. put all plots from svm part
 11. add h! for all tables in figures   
+2. Check bibilography of [5], add [5] to biblio
+8. Describe Recall/Precision/TPR/FPR, Matthews Correlation Coefficient
+11. Describe paper: Modeling high-frequency limit order book dynamics with support vector machines.
+Add it to bib.
 
-## TODO
+## TODO reading
 
-0. check Prediction of hidden liquidity in
-the limit order book of globex futures. for the gaussian model.
+0. check Prediction of hidden liquidity in the limit order book of globex futures. for the gaussian model.
 
 1. ReRead the paper about lob: "Modeling high-frequency limit order book dynamics with support 
 vector machines" [3]
 
-
-2. Check bibilography of [5], add [5] to biblio
 3. Read Benchmark Dataset for Mid-Price - [6]
 
 3. How prediction works is well described in [5]
 
-
-
 2. Read "Price jump prediction in Limit Order Book"
 
 10. Read: Classification-based Financial Markets Prediction using Deep Neural Networks
-
-11. Describe paper: Modeling high-frequency limit order book dynamics with support vector machines.
-Add it to bib.
 
 12. Read:
     * http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.114.4288
@@ -64,31 +55,48 @@ Add it to bib.
 
 9. Learn how to describe SVM mathematically
 
-8. Describe Recall/Precision/TPR/FPR
-
 
 ## Ideas:
 
-10. trying random classifiers as well!
-
-1. Apply PCA to full GDF 
-
-0. Check other features used in [3] and apply them next to queue imbalance
-
-
-4. Cohen’s kappa - metric for comparision, mean recall, precision and F1 
+3. queue imbalance second feature -  what about queue imbalance on more data from LOB? maybe second position?
+0. what if I take different sizes of gdfs? the middle one will be the tallest, but they will be flatter and flatter
 
 5. Check bibliography of already used papers.
 
-1. Does it have any sense though? GDF is a filter! Anyway we want some kind of a different filter.
-Let's try rolling window instead! 
-
-
-
 ## DONE
+
+0. what about queue imbalance on gdf?
+
+0. fill r_s_ sigmoid 9265 result
+
+1. rerun kernels for regular gdf because I added some parameters to c and gamma
+0. for small s/r notebooks pick the right features
+
+0. sigmoid kernel for gdfs with regular scaling (for small r, small s small rs)
+
+2. add stuff with prev_queue_imb to logistic notebook:
+    * compare with regular queue_imb
+    * plot it
+
+0. regenerate notebook with svm results
+0. in overview_all_svm replace results files
+2. include prev queue decision region plots
+
+0. checking if mathews score is better (for prev_queue)
+
+3. try with 2 previous queue imbalance or queue imbalance
+
+0. pick 3 stocks for case study (with 15000 data points): 9064 (<100), 9061 (682), 9265 (> 3000)
+(mid-price means)
+
+0. regenerate notebook with logistic regression results
+4. Cohen’s kappa - metric for comparision, mean recall, precision and F1 
+0. rerun feature scaling files because of the lack of the data
 
 1. read paper "Forecasting Stock Prices from the Limit Order Book using Convolutional Neural 
 Networks" [4] - useful!
+
+3. Read Benchmark Dataset for Mid-Price Forecasting  [6]
 
 10. Describe paper: Forecasting Stock Prices from the Limit Order Book using Convolutional Neural 
 Networks [4] in the section of previous works in mgr. Add it to bib. - done
@@ -101,7 +109,23 @@ Networks [4] in the section of previous works in mgr. Add it to bib. - done
 
 1. check 3 stock logistic and svm for 's'
 
+1. min-max for lob normalization in gdf approach (the previous one is wrong because it is on past data)
+
+1. run gdf_param_search, but fix checking if file exist
+
+1. What about other comparision metrics - recall, precision, accuracy
+
+2. Use cross-validation from with more folds [6]
+1. Apply PCA to full GDF 
+
 ### DONE - Negative 
+
+0. use Minka’s MLE to get the number of components for PCA - nope, it wants to use all 50
+0. logistic regression for pca_gdf_que3 - it doesn't seem to bring any improvement
+
+10. trying random classifiers as well!
+
+0. Check other features used in [3] and apply them next to queue imbalance
 
 0. Apply filtering the noise from [4] to the datasets! Try it with GDF (SVM, logit). 
 Use other metrics for comparision.
@@ -122,15 +146,24 @@ tune SVM - No, we can't
 
 4. Apply  some feature selection sklearn.feature_selection.SelectKBest to GDF - nope.
 
+
+0. test approach with k-means mid-prices: 
+    * what is the k?
+    * is the k values same across stocks?
+    * what decides about best k-value?
+    * what about normalization
+        - this is hard issue with that  
+    -> I don't see how this approach could help with anything, it only makes it a bit smoother
+
 ## Brain dump
 
 We start with logistic regression and queue imbalance. We use SVM with queue imbalance. 
 We use SVM with queue imbalance. We check if it is better with other features, etc. We also try some 
-tree algorithm on that? We do GDF. We try with states and markov chains.
+tree algorithm on that? We do GDF. 
 
 What is the problem we actually try to solve? How we should describe LOB for classification?
 Title of thesis is "feature selection for limit order book"? 
-"limit order book reperesentation for classification"?
+"limit order book representation for classification"?
 
 ## Useful
 
@@ -153,5 +186,9 @@ https://www.cis.upenn.edu/~mkearns/papers/KearnsNevmyvakaHFTRiskBooks.pdf
 http://epchan.blogspot.com/2013/10/how-useful-is-order-flow-and-vpin.html
 
 5. http://jcyhong.github.io/assets/machine-learning-price-movements.pdf
+
+6. https://stats.stackexchange.com/questions/210700/how-to-choose-between-roc-auc-and-f1-score
+
+7. https://en.wikipedia.org/wiki/Matthews_correlation_coefficient and paper
 
 https://github.com/rorysroes/SGX-Full-OrderBook-Tick-Data-Trading-Strategy

@@ -73,6 +73,7 @@ class SvmGdfResults(object):
         'pca_gdf_que_prev8': all_gdf_que_prev,
         'pca_gdf_que_prev9': all_gdf_que_prev,
         'pca_gdf_que_prev10': all_gdf_que_prev,
+        'pca_gdf_20-30_que3': ['gdf_{}'.format(i) for i in range(20, 30)] + ['queue_imbalance'],
     }
 
     def get_score_for_clf(self, clf, df_test, feature_name, pca=None):
@@ -88,6 +89,8 @@ class SvmGdfResults(object):
             return int(feature_name.replace('pca_gdf_que_prev', ''))
         if 'pca_gdf_que' in feature_name:
             return int(feature_name.replace('pca_gdf_que', ''))
+        if 'pca_gdf_20-30_que' in feature_name:
+            return int(feature_name.replace('pca_gdf_20-30_que', ''))
         if 'pca_gdf' in feature_name:
             return int(feature_name.replace('pca_gdf', ''))
         return None
@@ -200,10 +203,10 @@ def main_pca_gdf_que3(stock, r=0.1, s=0.1):
     results = []
     for C in [0.001, 0.01, 0.1, 1, 10, 100, 1000]:
         for g in [0.001, 0.01, 0.1, 1, 10, 100, 1000]:
-            scores = svm_gdf_res.train_svm(C=C, gamma=g, kernel='rbf', feature_name='pca_gdf_que3')
+            scores = svm_gdf_res.train_svm(C=C, gamma=g, kernel='rbf', feature_name='pca_gdf_20-30_que3')
             results.append(scores)
     pd.DataFrame(results).to_csv(
-        os.path.join(result_dir, 'svm_pca_gdf_{}_len{}_r{}_s{}.csv'.format(stock, data_length, r, s)))
+        os.path.join(result_dir, 'svm_pca_gdf_{}_len{}_r{}_s{}_K20-30.csv'.format(stock, data_length, r, s)))
 
 
 if __name__ == '__main__':

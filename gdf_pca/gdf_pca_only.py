@@ -1,5 +1,4 @@
 import logging
-import os
 from typing import Optional
 
 import numpy as np
@@ -29,20 +28,6 @@ class SvmGdfResults(object):
     all_gdf_que_prev = ['gdf_{}'.format(i) for i in range(0, 50)] + ['queue_imbalance', 'prev_queue_imbalance']
 
     feature_columns_dict = {
-        'que': ['queue_imbalance'],
-        'que_prev': ['queue_imbalance', 'prev_queue_imbalance'],
-        'gdf_24_26': ['gdf_24', 'gdf_25'],
-        'gdf_24-26_que': ['gdf_24', 'gdf_25', 'queue_imbalance'],
-        'gdf_24-26_que_prev': ['gdf_24', 'gdf_25', 'queue_imbalance', 'prev_queue_imbalance'],
-        'gdf_23-27': ['gdf_23', 'gdf_24', 'gdf_25', 'gdf_26'],
-        'gdf_23-27_que': ['gdf_23', 'gdf_24', 'gdf_25', 'gdf_26', 'queue_imbalance'],
-        'gdf_23-27_que_prev': ['gdf_23', 'gdf_24', 'gdf_25', 'gdf_26', 'queue_imbalance', 'prev_queue_imbalance'],
-        'gdf_20_30': ['gdf_{}'.format(i) for i in range(20, 30)],
-        'gdf_20_30_que': ['gdf_{}'.format(i) for i in range(20, 30)] + ['queue_imbalance'],
-        'gdf_20_30_que_prev': ['gdf_{}'.format(i) for i in range(20, 30)] + ['queue_imbalance', 'prev_queue_imbalance'],
-        'gdf_0_50': all_gdf,
-        'gdf_0-50_que': all_gdf_que,
-        'gdf_0-50_que_prev': all_gdf_que_prev,
         'pca_gdf1': all_gdf,
         'pca_gdf2': all_gdf,
         'pca_gdf3': all_gdf,
@@ -180,7 +165,7 @@ def main(stock):
         stock, r=r, s=s, data_length=data_length,
         gdf_filename_pattern='gdf_{}_' + 'len{}'.format(data_length) + '_r{}_s{}_K50')
     features = svm_gdf_res.features(SVC(kernel='rbf'))
-    features.to_csv('svm_features_{}_len{}_r{}_s{}.csv'.format(stock, data_length, r, s))
+    features.to_csv('svm_pca_only_features_{}_len{}_r{}_s{}.csv'.format(stock, data_length, r, s))
     best_feature = features.sort_values(by='matthews', ascending=False).iloc[0]
     logger.info(best_feature)
     results = []
@@ -188,22 +173,7 @@ def main(stock):
         for g in [0.001, 0.01, 0.1, 1, 10, 100, 1000]:
             scores = svm_gdf_res.train_svm(C=C, gamma=g, kernel='rbf', feature_name=best_feature['features'])
             results.append(scores)
-    pd.DataFrame(results).to_csv('svm_pca_gdf_{}_len{}_r{}_s{}.csv'.format(stock, data_length, r, s))
-
-
-def main_pca_gdf_que3(stock, r=0.1, s=0.1):
-    result_dir = 'res_pca_gdf_que3'
-    data_length = 10000
-    svm_gdf_res = SvmGdfResults(
-        stock, r=r, s=s, data_length=data_length,
-        gdf_filename_pattern='gdf_{}_' + 'len{}'.format(data_length) + '_r{}_s{}_K50')
-    results = []
-    for C in [0.001, 0.01, 0.1, 1, 10, 100, 1000]:
-        for g in [0.001, 0.01, 0.1, 1, 10, 100, 1000]:
-            scores = svm_gdf_res.train_svm(C=C, gamma=g, kernel='rbf', feature_name='pca_gdf_que3')
-            results.append(scores)
-    pd.DataFrame(results).to_csv(
-        os.path.join(result_dir, 'svm_pca_gdf_{}_len{}_r{}_s{}.csv'.format(stock, data_length, r, s)))
+    pd.DataFrame(results).to_csv('svm_pca_only_gdf_{}_len{}_r{}_s{}.csv'.format(stock, data_length, r, s))
 
 
 if __name__ == '__main__':
@@ -213,7 +183,7 @@ if __name__ == '__main__':
 
     pool = Pool(processes=5)
     stocks = list(roc_results.results_10000.keys())
-    res = [pool.apply_async(main_pca_gdf_que3, [s, 0.1, 1.0]) for s in stocks]
+    res = [pool.apply_async(main, [s]) for s in stocks]
     print([r.get() for r in res])
 
 

@@ -2,12 +2,10 @@ import os
 from ast import literal_eval
 from datetime import datetime
 
-import pandas as pd
 import numpy as np
-
-from scipy.stats import norm
-
+import pandas as pd
 from lob_data_utils.roc_results import results_15000
+from scipy.stats import norm
 
 
 def gdf_representation(buy_orders, sell_orders, gdf):
@@ -28,6 +26,7 @@ def transform_to_orders(df: pd.DataFrame, gdfs, K) -> pd.DataFrame:
     # df = df.loc[str(rng[1].date()):]
     for idx, row in df.iterrows():
         try:
+
             d_bid = np.array([literal_eval(row.get('bid_norm'))][0])
             d_ask = np.array([literal_eval(row.get('ask_norm'))][0])
 
@@ -35,6 +34,7 @@ def transform_to_orders(df: pd.DataFrame, gdfs, K) -> pd.DataFrame:
             d_ask_prices = d_ask[:, 0]
             d_bid_volumes = d_bid[:, 1]
             d_ask_volumes = d_ask[:, 1]
+
         except Exception as e:
             print(e)
             raise e
@@ -65,6 +65,7 @@ def main(stock):
             K = 50
             filename = 'gdf_{}_r{}_s{}_K{}.csv'.format(stock, r, s, K)
             if os.path.exists(os.path.join(data_dir_out, filename)):
+
                 print('already exists ', filename, datetime.now().isoformat())
                 continue
 
@@ -86,6 +87,8 @@ def main(stock):
 if __name__ == "__main__":
     from multiprocessing import Pool
     stocks = list(results_15000.keys())
+   # stocks = list(results_10000.keys())
+   # stocks = ['9061', '9064', '9265']
 
     pool = Pool(processes=5)
 

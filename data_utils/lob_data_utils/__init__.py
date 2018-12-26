@@ -1,1 +1,1 @@
-__all__ = ['lob', 'roc', 'roc_results']
+__all__ = ['lob', 'roc', 'roc_results', 'model']

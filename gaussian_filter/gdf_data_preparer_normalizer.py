@@ -5,7 +5,6 @@ from datetime import datetime
 
 import pandas as pd
 import numpy as np
-from lob_data_utils import roc_results
 from lob_data_utils.roc_results import results_15000
 
 
