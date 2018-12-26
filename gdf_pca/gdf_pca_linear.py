@@ -175,29 +175,10 @@ class SvmGdfResults(object):
         return pd.DataFrame(res)
 
 
-def main(stock):
-    data_length = 10000
-    r = 1.0
-    s = 0.1
-    svm_gdf_res = SvmGdfResults(
-        stock, r=r, s=s, data_length=data_length,
-        gdf_filename_pattern='gdf_{}_' + 'len{}'.format(data_length) + '_r{}_s{}_K50')
-    features = svm_gdf_res.features(SVC(kernel='rbf'))
-    features.to_csv('svm_features_{}_len{}_r{}_s{}.csv'.format(stock, data_length, r, s))
-    best_feature = features.sort_values(by='matthews', ascending=False).iloc[0]
-    logger.info(best_feature)
-    results = []
-    for C in [0.001, 0.01, 0.1, 1, 10, 100, 1000]:
-        for g in [0.001, 0.01, 0.1, 1, 10, 100, 1000]:
-            scores = svm_gdf_res.train_svm(C=C, gamma=g, kernel='rbf', feature_name=best_feature['features'])
-            results.append(scores)
-    pd.DataFrame(results).to_csv('svm_pca_gdf_{}_len{}_r{}_s{}.csv'.format(stock, data_length, r, s))
-
-
 def main_pca_gdf_que3(stock, r=0.1, s=0.1):
     result_dir = 'res_pca_gdf_que3'
     data_length = 10000
-    filename = os.path.join(result_dir, 'svm_pca_gdf_{}_len{}_r{}_s{}_K20-30.csv'.format(stock, data_length, r, s))
+    filename = os.path.join(result_dir, 'svm_pca_gdf_linear_{}_len{}_r{}_s{}.csv'.format(stock, data_length, r, s))
     if os.path.exists(filename):
         logger.info('Filename %s already exists, skipping', filename)
         return
@@ -206,8 +187,7 @@ def main_pca_gdf_que3(stock, r=0.1, s=0.1):
         gdf_filename_pattern='gdf_{}_' + 'len{}'.format(data_length) + '_r{}_s{}_K50')
     results = []
     for C in [0.001, 0.01, 0.1, 1, 10, 100, 1000]:
-        for g in [0.001, 0.01, 0.1, 1, 10, 100, 1000]:
-            scores = svm_gdf_res.train_svm(C=C, gamma=g, kernel='rbf', feature_name='pca_gdf_20-30_que3')
+            scores = svm_gdf_res.train_svm(C=C, kernel='linear', feature_name='pca_gdf_que3')
             results.append(scores)
     pd.DataFrame(results).to_csv(filename)
 
@@ -221,5 +201,12 @@ if __name__ == '__main__':
     stocks = list(roc_results.results_10000.keys())
     res = [pool.apply_async(main_pca_gdf_que3, [s, 0.1, 1.0]) for s in stocks]
     print([r.get() for r in res])
+    res = [pool.apply_async(main_pca_gdf_que3, [s, 1.0, 1.0]) for s in stocks]
+    print([r.get() for r in res])
+    res = [pool.apply_async(main_pca_gdf_que3, [s, 0.1, 0.1]) for s in stocks]
+    print([r.get() for r in res])
+    res = [pool.apply_async(main_pca_gdf_que3, [s, 1.0, 0.1]) for s in stocks]
+    print([r.get() for r in res])
+
 
 

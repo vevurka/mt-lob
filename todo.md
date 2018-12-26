@@ -1,20 +1,30 @@
 # TODO
 
-
-
 0. pca_gdf_que3 train svms (I've choosen small r big s because that was the best feature for these)
-1. sigmoid kernel?
-1. what if we take pca from smaller range of gdf
-0. what are coefs for gdf_0-50_que_prev
+1. what if we take pca from smaller range of gdf - rbf
+1. what if we take pca from smaller range of gdf - sigmoid
 1. test logistic regression for the pca approach
+
 1. check what is actually picked by pca... - think about visualizations
-0. differences between gdfs (regarding params r s )
+0. differences between gdfs (regarding params r s ) - apply some clustering?
 2. fix overview notebooks for svm and logistic for queue_imb (4 notebooks) for the list return from data_utils.model
 5. copy results from random/more_queue* notebooks to overview after calculation is done
 7. C parameter for logistic regression
 
+## TODO overview - case study
+
+0. svm - for overview analyze support vectors
+0.check what if 15000 datapoints - for case study as well
+1. feature search for these 3 stocks
+
 
 ## TODO mgr
+
+0.svm results linear copy again results from random
+
+0. prev que imbalance in methodology
+1. prev que imbalance in case study
+2. prev que imbalance in results
 0. rewrite part about validation 10 anchored forward validation
 1. rewrite results with new validation and scoring for logistic regression in mgr
 0. check plots in results for logistic in mgr
@@ -24,11 +34,18 @@
 11. read Mid-price Prediction Based on Machine Learning Methods [5]
 0. Describe plots in Case Study chapter in mgr
 10. put all plots from svm part
-11. add h! for all tables in figures   
+  
 2. Check bibilography of [5], add [5] to biblio
 8. Describe Recall/Precision/TPR/FPR, Matthews Correlation Coefficient
 11. Describe paper: Modeling high-frequency limit order book dynamics with support vector machines.
 Add it to bib.
+
+## TODO mgr cosmetic changes
+
+9. mid price -> Mid-Price with textbf
+9. queue imbalance -> Queue Imbalance with textbf
+9. Cut white edges for plots for case study
+11. add h! for all tables in figures 
 
 ## TODO reading
 
@@ -40,6 +57,9 @@ vector machines" [3]
 3. Read Benchmark Dataset for Mid-Price - [6]
 
 3. How prediction works is well described in [5]
+
+4. Read [7]
+
 
 2. Read "Price jump prediction in Limit Order Book"
 
@@ -54,6 +74,8 @@ vector machines" [3]
 8. Learn how to describe logistic regression mathematically
 
 9. Learn how to describe SVM mathematically
+
+10. Learn PCA 
 
 
 ## Ideas:
@@ -118,10 +140,13 @@ Networks [4] in the section of previous works in mgr. Add it to bib. - done
 2. Use cross-validation from with more folds [6]
 1. Apply PCA to full GDF 
 
-### DONE - Negative 
+### DONE - Negative
+
+0. what are coefs for gdf_0-50_que_prev - impossible to tell for rbf kernel 
 
 0. use Minka’s MLE to get the number of components for PCA - nope, it wants to use all 50
 0. logistic regression for pca_gdf_que3 - it doesn't seem to bring any improvement
+
 
 10. trying random classifiers as well!
 
@@ -174,6 +199,8 @@ Title of thesis is "feature selection for limit order book"?
 5. Mid-price Prediction Based on Machine Learning Methods with Technical and Quantitative Indicators [5]
 
 6. Benchmark Dataset for Mid-Price Forecasting of Limit Order Book Data with Machine Learning Methods [6]
+
+8. Evaluating and Comparing Classifiers: Review, Some Recommendations and Limitations [7]
 
 1. https://stats.stackexchange.com/questions/18030/how-to-select-kernel-for-svm?rq=1
 
