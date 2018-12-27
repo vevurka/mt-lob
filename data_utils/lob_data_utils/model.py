@@ -63,7 +63,9 @@ def _divide_folds(x, y, i, folds=10):
     return x_fold_train, y_fold_train, x_fold_test, y_fold_test
 
 
-def test_model(clf, test_data, labels):
+def test_model(clf, test_data, labels, prefix=None):
+    if not prefix:
+        prefix = 'test'
     prediction = clf.predict(test_data)
     f1_score = metrics.f1_score(labels, prediction)
     recall_score = metrics.recall_score(labels, prediction)
@@ -75,16 +77,23 @@ def test_model(clf, test_data, labels):
     except ValueError as e:
         roc_auc_score = np.nan
     return {
-        'test_precision': precision_score,
-        'test_f1': f1_score,
-        'test_recall': recall_score,
-        'test_roc_auc': roc_auc_score,
-        'test_kappa': kappa_score,
-        'test_matthews': matthews_score,
+        '{}_precision'.format(prefix): precision_score,
+        '{}_f1'.format(prefix): f1_score,
+        '{}_recall'.format(prefix): recall_score,
+        '{}_roc_auc'.format(prefix): roc_auc_score,
+        '{}_kappa'.format(prefix): kappa_score,
+        '{}_matthews'.format(prefix): matthews_score,
     }
 
 
-def validate_model(clf, train_data, labels, folds=10):
+def train_model(clf, train_data, labels, prefix=None):
+    if not prefix:
+        prefix = 'train'
+    clf.fit(train_data, labels)
+    return test_model(clf, train_data, labels, prefix=prefix)
+
+
+def validate_model(clf, train_data, labels, folds=10, print_debug=False):
     f1_scores = []
     recall_scores = []
     precision_scores = []
@@ -99,6 +108,8 @@ def validate_model(clf, train_data, labels, folds=10):
     train_matthews = []
 
     for i in range(folds - 1):
+        if print_debug:
+            print('Training fold ', i)
         x_fold_train, y_fold_train, x_fold_test, y_fold_test = _divide_folds(train_data, labels, i, folds=folds)
 
         clf.fit(x_fold_train, y_fold_train)

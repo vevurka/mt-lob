@@ -1,5 +1,10 @@
 # TODO
 
+0. comparision visualization bar plot or something like that
+0. what if we take pca of gdf and queue imbalance separatelly?
+1. use proper train model function from lib
+0. prepare notebooks for overview of PCA
+0. in results pca gdf notebooks we need to recalucalte best classification to truly compare results.
 0. pca_gdf_que3 train svms (I've choosen small r big s because that was the best feature for these)
 1. what if we take pca from smaller range of gdf - rbf
 1. what if we take pca from smaller range of gdf - sigmoid
@@ -10,6 +15,7 @@
 2. fix overview notebooks for svm and logistic for queue_imb (4 notebooks) for the list return from data_utils.model
 5. copy results from random/more_queue* notebooks to overview after calculation is done
 7. C parameter for logistic regression
+0. look at correlations btw Pcaed gdfs and mid price indicator for different r and s
 
 ## TODO overview - case study
 
