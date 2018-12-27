@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class SvmGdfResults(object):
 
     def __init__(self, stock, r=1.0, s=1.0, data_length=10000, gdf_filename_pattern='',
-                 data_dir='../gaussian_filter/data_gdf'):
+                 data_dir='../gaussian_filter/data_gdf_whole'):
         self.stock = stock
         self.r = r
         self.s = s
@@ -73,7 +73,6 @@ class SvmGdfResults(object):
         'pca_gdf_que_prev8': all_gdf_que_prev,
         'pca_gdf_que_prev9': all_gdf_que_prev,
         'pca_gdf_que_prev10': all_gdf_que_prev,
-        'pca_gdf_20-30_que3': ['gdf_{}'.format(i) for i in range(20, 30)] + ['queue_imbalance'],
     }
 
     def get_score_for_clf(self, clf, df_test, feature_name, pca=None):
@@ -89,8 +88,6 @@ class SvmGdfResults(object):
             return int(feature_name.replace('pca_gdf_que_prev', ''))
         if 'pca_gdf_que' in feature_name:
             return int(feature_name.replace('pca_gdf_que', ''))
-        if 'pca_gdf_20-30_que' in feature_name:
-            return int(feature_name.replace('pca_gdf_20-30_que', ''))
         if 'pca_gdf' in feature_name:
             return int(feature_name.replace('pca_gdf', ''))
         return None
@@ -102,15 +99,16 @@ class SvmGdfResults(object):
             mean_scores[k] = np.mean(v)
         return mean_scores
 
-    def train_svm(self, C=None, gamma=None, feature_name='', kernel='rbf', coef0=np.nan):
+    def train_svm(self, C=None, gamma=None, feature_name='', kernel='rbf', coef0=np.nan, clf=None):
         logger.info('Training %s r=%s s=%s: kernel=%s C=%s gamma=%s coef0=%s',
                     self.stock, self.r, self.s, kernel, C, gamma, coef0)
-        if C and gamma and coef0:
-            clf = SVC(kernel=kernel, C=C, gamma=gamma, coef0=coef0)
-        elif C and gamma:
-            clf = SVC(kernel=kernel, C=C, gamma=gamma)
-        else:
-            clf = SVC(kernel=kernel)
+        if not clf:
+            if C and gamma and coef0:
+                clf = SVC(kernel=kernel, C=C, gamma=gamma, coef0=coef0)
+            elif C and gamma:
+                clf = SVC(kernel=kernel, C=C, gamma=gamma)
+            else:
+                clf = SVC(kernel=kernel)
         train_x = self.df[self.feature_columns_dict[feature_name]]
         n_components = self.get_number_of_pca_components(feature_name)
         pca = None
@@ -137,8 +135,12 @@ class SvmGdfResults(object):
         gdf_filename = self.gdf_filename_pattern.format(self.stock, self.r, self.s)
         reg_filename = '{}'.format(self.stock)
         logger.debug('Will read %s and %s', gdf_filename, reg_filename)
-        df, df_test = lob.load_prepared_data(
+        d = lob.load_prepared_data(
             gdf_filename, data_dir=self.data_dir, cv=False, length=self.data_length)
+        if d is not None and len(d) == 2:
+            df, df_test = d
+        else:
+            return None
         df_reg, df_reg_test = lob.load_prepared_data(
             reg_filename, data_dir='../gaussian_filter/data', cv=False, length=self.data_length)
 
@@ -175,39 +177,27 @@ class SvmGdfResults(object):
         return pd.DataFrame(res)
 
 
-def main(stock):
-    data_length = 10000
-    r = 1.0
-    s = 0.1
-    svm_gdf_res = SvmGdfResults(
-        stock, r=r, s=s, data_length=data_length,
-        gdf_filename_pattern='gdf_{}_' + 'len{}'.format(data_length) + '_r{}_s{}_K50')
-    features = svm_gdf_res.features(SVC(kernel='rbf'))
-    features.to_csv('svm_features_{}_len{}_r{}_s{}.csv'.format(stock, data_length, r, s))
-    best_feature = features.sort_values(by='matthews', ascending=False).iloc[0]
-    logger.info(best_feature)
-    results = []
-    for C in [0.001, 0.01, 0.1, 1, 10, 100, 1000]:
-        for g in [0.001, 0.01, 0.1, 1, 10, 100, 1000]:
-            scores = svm_gdf_res.train_svm(C=C, gamma=g, kernel='rbf', feature_name=best_feature['features'])
-            results.append(scores)
-    pd.DataFrame(results).to_csv('svm_pca_gdf_{}_len{}_r{}_s{}.csv'.format(stock, data_length, r, s))
-
-
-def main_pca_gdf_que3(stock, r=0.1, s=0.1):
-    result_dir = 'res_pca_gdf_que3'
-    data_length = 10000
-    svm_gdf_res = SvmGdfResults(
-        stock, r=r, s=s, data_length=data_length,
-        gdf_filename_pattern='gdf_{}_' + 'len{}'.format(data_length) + '_r{}_s{}_K50')
-    results = []
-    for C in [0.01, 1.0, 100.0]:
-        for g in [0.01, 1.0, 100.0]:
-            for coef0 in [0.01, 1.0, 100.0]:
-                scores = svm_gdf_res.train_svm(C=C, gamma=g, coef0=coef0, kernel='sigmoid', feature_name='pca_gdf_que3')
-                results.append(scores)
-    pd.DataFrame(results).to_csv(
-        os.path.join(result_dir, 'svm_pca_gdf_sigmoid_{}_len{}_r{}_s{}.csv'.format(stock, data_length, r, s)))
+def main(stock, r=0.1, s=0.1):
+    try:
+        results_dir = 'res_pca_gdf3_15000'
+        data_length = 15000
+        result_csv = os.path.join(results_dir, 'svm_pca_gdf_sigmoid_{}_len{}_r{}_s{}.csv'.format(stock, data_length, r, s))
+        svm_gdf_res = SvmGdfResults(
+            stock, r=r, s=s, data_length=data_length,
+            gdf_filename_pattern='gdf_{}_r{}_s{}_K50')
+        if not os.path.exists(result_csv):
+            results = []
+            for C in [0.01, 1.0, 100.0]:
+                for g in [0.01, 1.0, 100.0]:
+                    for coef0 in [0.01, 1.0, 100.0]:
+                        scores = svm_gdf_res.train_svm(C=C, gamma=g, coef0=coef0, kernel='sigmoid',
+                                                       feature_name='pca_gdf_que3')
+                        results.append(scores)
+            pd.DataFrame(results).to_csv(result_csv)
+            return True
+    except Exception as e:
+        print(e)
+        return False
 
 
 if __name__ == '__main__':
@@ -215,16 +205,18 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
 
-    pool = Pool(processes=5)
-    stocks = list(roc_results.results_10000.keys())
-    res = [pool.apply_async(main_pca_gdf_que3, [s, 0.1, 1.0]) for s in stocks]
+    pool = Pool(processes=2)
+    stocks = list(roc_results.results_15000.keys())
+    res = [pool.apply_async(main, [s, 0.1, 0.1]) for s in stocks]
     print([r.get() for r in res])
-    res = [pool.apply_async(main_pca_gdf_que3, [s, 0.1, 0.1]) for s in stocks]
+    res = [pool.apply_async(main, [s, 0.1, 1.0]) for s in stocks]
     print([r.get() for r in res])
-    res = [pool.apply_async(main_pca_gdf_que3, [s, 1.0, 1.0]) for s in stocks]
+    res = [pool.apply_async(main, [s, 1.0, 1.0]) for s in stocks]
     print([r.get() for r in res])
-    res = [pool.apply_async(main_pca_gdf_que3, [s, 1.0, 0.1]) for s in stocks]
+    res = [pool.apply_async(main, [s, 1.0, 0.1]) for s in stocks]
     print([r.get() for r in res])
+
+
 
 
 

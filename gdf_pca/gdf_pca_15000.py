@@ -182,7 +182,7 @@ def main(stock, r=0.1, s=0.1):
         results_dir = 'res_15000'
         data_length = 15000
         features_csv = os.path.join(results_dir, 'svm_features_{}_len{}_r{}_s{}.csv'.format(stock, data_length, r, s))
-        result_csv = os.path.join(results_dir, 'svm_pca_gdf_{}_len{}_r{}_s{}.csv'.format(stock, data_length, r, s))
+        result_csv = os.path.join(results_dir, 'svm_pca_gdf_sigmoid_{}_len{}_r{}_s{}.csv'.format(stock, data_length, r, s))
         svm_gdf_res = SvmGdfResults(
             stock, r=r, s=s, data_length=data_length,
             gdf_filename_pattern='gdf_{}_r{}_s{}_K50')
@@ -195,11 +195,12 @@ def main(stock, r=0.1, s=0.1):
         logger.info(best_feature)
         if not os.path.exists(result_csv):
             results = []
-            for C in [0.001, 0.01, 0.1, 1, 10, 100, 1000]:
-                for g in [0.001, 0.01, 0.1, 1, 10, 100, 1000]:
-                    scores = svm_gdf_res.train_svm(C=C, gamma=g, kernel='rbf',
-                                                   feature_name=best_feature['features'])
-                    results.append(scores)
+            for C in [0.01, 1.0, 100.0]:
+                for g in [0.01, 1.0, 100.0]:
+                    for coef0 in [0.01, 1.0, 100.0]:
+                        scores = svm_gdf_res.train_svm(C=C, gamma=g, coef0=coef0, kernel='sigmoid',
+                                                       feature_name=best_feature['features'])
+                        results.append(scores)
             pd.DataFrame(results).to_csv(result_csv)
             return True
     except Exception as e:
@@ -216,12 +217,12 @@ if __name__ == '__main__':
     stocks = list(roc_results.results_15000.keys())
     res = [pool.apply_async(main, [s, 0.1, 0.1]) for s in stocks]
     print([r.get() for r in res])
-    # res = [pool.apply_async(main, [s, 0.1, 1.0]) for s in stocks]
-    # print([r.get() for r in res])
-    # res = [pool.apply_async(main, [s, 1.0, 1.0]) for s in stocks]
-    # print([r.get() for r in res])
-    # res = [pool.apply_async(main, [s, 1.0, 0.1]) for s in stocks]
-    # print([r.get() for r in res])
+    res = [pool.apply_async(main, [s, 0.1, 1.0]) for s in stocks]
+    print([r.get() for r in res])
+    res = [pool.apply_async(main, [s, 1.0, 1.0]) for s in stocks]
+    print([r.get() for r in res])
+    res = [pool.apply_async(main, [s, 1.0, 0.1]) for s in stocks]
+    print([r.get() for r in res])
 
 
 
