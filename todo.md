@@ -15,7 +15,7 @@
 2. fix overview notebooks for svm and logistic for queue_imb (4 notebooks) for the list return from data_utils.model
 5. copy results from random/more_queue* notebooks to overview after calculation is done
 7. C parameter for logistic regression
-0. look at correlations btw Pcaed gdfs and mid price indicator for different r and s
+0. look at correlations btw Pcaed gdfs and mid price indicator for different r and s    
 
 ## TODO overview - case study
 

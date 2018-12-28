@@ -108,7 +108,7 @@ class SvmGdfResults(object):
             elif C and gamma:
                 clf = SVC(kernel=kernel, C=C, gamma=gamma)
             else:
-                clf = SVC(kernel=kernel)
+                clf = SVC(kernel=kernel, C=C)
         train_x = self.df[self.feature_columns_dict[feature_name]]
         n_components = self.get_number_of_pca_components(feature_name)
         pca = None
