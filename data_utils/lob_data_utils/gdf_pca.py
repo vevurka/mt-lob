@@ -73,6 +73,7 @@ class SvmGdfResults(object):
         'pca_gdf_que_prev8': all_gdf_que_prev,
         'pca_gdf_que_prev9': all_gdf_que_prev,
         'pca_gdf_que_prev10': all_gdf_que_prev,
+        'pca_gdf_que_prev_split10': all_gdf_que_prev
     }
 
     def get_score_for_clf(self, clf, df_test, feature_name, pca=None):
@@ -84,6 +85,8 @@ class SvmGdfResults(object):
 
     @staticmethod
     def get_number_of_pca_components(feature_name: str) -> Optional[int]:
+        if 'pca_gdf_que_prev_split' in feature_name:
+            return int(feature_name.replace('pca_gdf_que_prev_split', ''))
         if 'pca_gdf_que_prev' in feature_name:
             return int(feature_name.replace('pca_gdf_que_prev', ''))
         if 'pca_gdf_que' in feature_name:
@@ -99,7 +102,43 @@ class SvmGdfResults(object):
             mean_scores[k] = np.mean(v)
         return mean_scores
 
-    def train_log(self, clf, feature_name='', should_validate=True):
+    def get_score_for_clf_split_pca(self, clf, df_test, feature_name, pca=None):
+        x_test = df_test[self.feature_columns_dict[feature_name]]
+        x_test_pca = x_test[[col for col in x_test.columns if 'gdf' in col]]
+        x_test = x_test[[col for col in x_test.columns if 'gdf' not in col]]
+        if pca:
+            x_test_pca = pca.transform(x_test_pca)
+        for n in range(pca.n_components):
+            x_test['pca_{}'.format(n)] = x_test_pca[:, n]
+        y_test = df_test['mid_price_indicator'].values
+        return model.test_model(clf, x_test, y_test)
+
+    def train_clf_with_split_pca(self, clf, feature_name, method=None):
+        logger.info('Training %s r=%s s=%s:',
+                    self.stock, self.r, self.s)
+        train_x = self.df[self.feature_columns_dict[feature_name]]
+        train_pca = train_x[[col for col in train_x.columns if 'gdf' in col]]
+        train_x = train_x[[col for col in train_x.columns if 'gdf' not in col]]
+        n_components = self.get_number_of_pca_components(feature_name)
+        pca = None
+        if n_components:
+            pca = PCA(n_components=n_components)
+            pca.fit(train_pca)
+            train_pca = pca.transform(train_pca)
+        for n in range(n_components):
+            train_x['pca_{}'.format(n)] = train_pca[:, n]
+        scores = model.validate_model(clf, train_x, self.df['mid_price_indicator'])
+        res = {
+            **self.get_mean_scores(scores),
+            'stock': self.stock,
+            'method': method,
+            'features': feature_name
+        }
+        test_scores = self.get_score_for_clf_split_pca(clf, self.df_test, feature_name=feature_name, pca=pca)
+        logger.info('Finished training %s %s', self.stock, {**res, **test_scores})
+        return {**res, **test_scores}
+
+    def train_clf(self, clf, feature_name='', should_validate=True, method=None):
         logger.info('Training %s r=%s s=%s: clf=%s',
                     self.stock, self.r, self.s, clf)
         train_x = self.df[self.feature_columns_dict[feature_name]]
@@ -114,10 +153,12 @@ class SvmGdfResults(object):
             scores = self.get_mean_scores(scores_arrays)
         else:
             scores = model.train_model(clf, train_x, self.df['mid_price_indicator'])
+        if not method:
+            method = 'logistic'
         res = {
             **scores,
             'stock': self.stock,
-            'kernel': 'logistic',
+            'kernel': method,
             'features': feature_name
         }
         test_scores = self.get_score_for_clf(clf, self.df_test, feature_name=feature_name, pca=pca)
@@ -162,8 +203,12 @@ class SvmGdfResults(object):
         gdf_filename = self.gdf_filename_pattern.format(self.stock, self.r, self.s)
         reg_filename = '{}'.format(self.stock)
         logger.debug('Will read %s and %s', gdf_filename, reg_filename)
-        df, df_test = lob.load_prepared_data(
+        d = lob.load_prepared_data(
             gdf_filename, data_dir=self.data_dir, cv=False, length=self.data_length)
+        if len(d) == 2:
+            df, df_test = d
+        else:
+            return pd.DataFrame(), pd.DataFrame()
         df_reg, df_reg_test = lob.load_prepared_data(
             reg_filename, data_dir='../gaussian_filter/data', cv=False, length=self.data_length)
         df['datetime'] = df_reg['Unnamed: 0']

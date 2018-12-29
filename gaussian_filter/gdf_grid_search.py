@@ -182,7 +182,7 @@ def main(stock, r=0.1, s=0.1):
         results_dir = 'data_res_9061_len15000'
         data_length = 15000
         feature_name = 'gdf_23-27'
-        result_csv = os.path.join(results_dir, 'svm_rbf_{}_{}_len{}_r{}_s{}.csv'.format(
+        result_csv = os.path.join(results_dir, 'svm_linear_{}_{}_len{}_r{}_s{}.csv'.format(
             stock, feature_name, data_length, r, s))
         svm_gdf_res = SvmGdfResults(
             stock, r=r, s=s, data_length=data_length,
@@ -190,8 +190,7 @@ def main(stock, r=0.1, s=0.1):
         if not os.path.exists(result_csv):
             results = []
             for C in [0.001, 0.01, 0.1, 1, 10, 100, 1000]:
-                for g in [0.001, 0.01, 0.1, 1, 10, 100, 1000]:
-                    scores = svm_gdf_res.train_svm(C=C, gamma=g, kernel='rbf',
+                    scores = svm_gdf_res.train_svm(C=C, kernel='linear',
                                                    feature_name=feature_name)
                     results.append(scores)
             pd.DataFrame(results).to_csv(result_csv)
@@ -207,15 +206,13 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
 
     pool = Pool(processes=4)
-    stocks = list(roc_results.results_15000.keys())
-    res = [pool.apply_async(main, [s, 0.1, 0.1]) for s in stocks]
+    stocks = ['9061'] #list(roc_results.results_15000.keys())
+    s = '9061'
+    params = [[s, 0.1, 0.1], [s, 1.0, 0.1], [s, 1.0, 1.0], [s, 0.1, 1.0]]
+
+    res = [pool.apply_async(main, p) for p in params]
     print([r.get() for r in res])
-    res = [pool.apply_async(main, [s, 0.1, 1.0]) for s in stocks]
-    print([r.get() for r in res])
-    res = [pool.apply_async(main, [s, 1.0, 1.0]) for s in stocks]
-    print([r.get() for r in res])
-    res = [pool.apply_async(main, [s, 1.0, 0.1]) for s in stocks]
-    print([r.get() for r in res])
+
 
 
 
