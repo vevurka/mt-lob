@@ -4,7 +4,7 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
-from lob_data_utils.roc_results import results_15000
+from lob_data_utils import roc_results
 from scipy.stats import norm
 
 
@@ -55,15 +55,15 @@ def transform_to_orders(df: pd.DataFrame, gdfs, K) -> pd.DataFrame:
 
 
 def main(stock):
-    data_dir_in = 'data_gdf_whole'
-    data_dir_out = 'data_gdf_whole'
-    rr = [0.1, 1.0]
-    ss = [0.1, 1.0]
+    data_dir_in = 'data_gdf'
+    data_dir_out = 'data_gdf_r0.01'
+    rr = [0.01]
+    ss = [0.1]
     print(stock, datetime.now().isoformat())
     for r in rr:
         for s in ss:
             K = 50
-            filename = 'gdf_{}_r{}_s{}_K{}.csv'.format(stock, r, s, K)
+            filename = 'gdf_{}_len10000_r{}_s{}_K{}.csv'.format(stock, r, s, K)
             if os.path.exists(os.path.join(data_dir_out, filename)):
 
                 print('already exists ', filename, datetime.now().isoformat())
@@ -77,7 +77,7 @@ def main(stock):
             print('preparing', filename, datetime.now().isoformat())
 
             df = pd.read_csv(
-                os.path.join(data_dir_in, stock + '_normalized.csv'))
+                os.path.join(data_dir_in, '{}_len10000_normalized.csv'.format(stock)))
             df = transform_to_orders(df, gdfs, K)
             print('writing', filename, len(df), datetime.now().isoformat())
             df.to_csv(os.path.join(data_dir_out, filename))
@@ -86,11 +86,11 @@ def main(stock):
 
 if __name__ == "__main__":
     from multiprocessing import Pool
-    stocks = list(results_15000.keys())
+    stocks = list(roc_results.results_10000.keys())
    # stocks = list(results_10000.keys())
    # stocks = ['9061', '9064', '9265']
 
-    pool = Pool(processes=5)
+    pool = Pool(processes=4)
 
     res = [pool.apply_async(main, [s]) for s in stocks]
     print([r.get() for r in res])
