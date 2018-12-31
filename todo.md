@@ -1,5 +1,6 @@
 # TODO
 
+0. neural nets for r 0.01
 0. comparision visualization bar plot or something like that
 0. what if we take pca of gdf and queue imbalance separatelly?
 1. use proper train model function from lib
