@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
     pool = Pool(processes=5)
     stocks = list(roc_results.results_10000.keys())
-    res = [pool.apply_async(main, [s, 0.01, 1.0]) for s in stocks]
+    res = [pool.apply_async(main, [s, 0.01, 0.1]) for s in stocks]
     print([r.get() for r in res])
     # res = [pool.apply_async(main, [s, 0.1, 1.0]) for s in stocks]
     # print([r.get() for r in res])
