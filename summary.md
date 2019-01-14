@@ -38,5 +38,6 @@ classification.
 
 * look at PCA explained variance, do I have to pick number of components = 10
 * look at r and s parameters for GDF - design an algorithm for choosing them
+* there is a hole in gdfs (lower values for middle gdfs), should I fix it?  
 * think about visualizing results (maybe there is some similar paper which has a perfect result section?)
 
