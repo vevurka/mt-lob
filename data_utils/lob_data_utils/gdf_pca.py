@@ -138,6 +138,39 @@ class SvmGdfResults(object):
         logger.info('Finished training %s %s', self.stock, {**res, **test_scores})
         return {**res, **test_scores}
 
+    def train_lstm(self, clf, feature_name='', should_validate=True, method=None, fit_kwargs=None):
+        logger.info('Training %s r=%s s=%s: clf=%s', self.stock, self.r, self.s, clf)
+        n_components = self.get_number_of_pca_components(feature_name)
+        train_x = self.df[self.feature_columns_dict[feature_name]].values
+        test_x = self.df_test[self.feature_columns_dict[feature_name]].values
+        if n_components:
+            pca = PCA(n_components=n_components)
+            pca.fit(train_x)
+            train_x = pca.transform(train_x)
+            test_x = pca.transform(test_x)
+
+        train_x = np.reshape(train_x, (train_x.shape[0], 1, train_x.shape[1]))
+        test_x = np.reshape(test_x, (test_x.shape[0], 1, test_x.shape[1]))
+
+        if should_validate:
+            scores_arrays = model.validate_model(clf, train_x, self.df['mid_price_indicator'].values,
+                                                 fit_kwargs=fit_kwargs, is_lstm=True)
+            scores = self.get_mean_scores(scores_arrays)
+        else:
+            scores = model.train_model(clf, train_x, self.df['mid_price_indicator'].values,
+                                       fit_kwargs=fit_kwargs, is_lstm=True)
+        if not method:
+            method = 'lstm'
+        res = {
+            **scores,
+            'stock': self.stock,
+            'kernel': method,
+            'features': feature_name
+        }
+        test_scores = model.test_model(clf, test_x, self.df_test['mid_price_indicator'].values, is_lstm=True)
+        logger.info('Finished training %s %s', self.stock, {**res, **test_scores})
+        return {**res, **test_scores}
+
     def train_clf(self, clf, feature_name='', should_validate=True, method=None):
         logger.info('Training %s r=%s s=%s: clf=%s',
                     self.stock, self.r, self.s, clf)

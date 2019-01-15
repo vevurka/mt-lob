@@ -54,19 +54,25 @@ class TestValidateModel(unittest.TestCase):
         np.testing.assert_array_equal(res['roc_auc'], np.nan)
 
 
-def _divide_folds(x, y, i, folds=10):
+def _divide_folds(x, y, i, folds=10, step_size=3, print_debug=False):
     fold_size = len(x) // (folds + 1)
-    x_fold_train = x[0: (i + 1) * fold_size]
-    y_fold_train = y[0: (i + 1) * fold_size]
+    if print_debug:
+        print('train: ', (i + 1 - step_size) * fold_size , (i + 1) * fold_size)
+        print('val:', (i + 1) * fold_size, (i + 2) * fold_size)
+    x_fold_train = x[(i + 1 - step_size) * fold_size: (i + 1) * fold_size]
+    y_fold_train = y[(i + 1 - step_size) * fold_size: (i + 1) * fold_size]
     x_fold_test = x[(i + 1) * fold_size: (i + 2) * fold_size]
     y_fold_test = y[(i + 1) * fold_size: (i + 2) * fold_size]
     return x_fold_train, y_fold_train, x_fold_test, y_fold_test
 
 
-def test_model(clf, test_data, labels, prefix=None):
+def test_model(clf, test_data, labels, prefix=None, is_lstm=False):
     if not prefix:
         prefix = 'test'
-    prediction = clf.predict(test_data)
+    if is_lstm:
+        prediction = clf.predict_classes(test_data)
+    else:
+        prediction = clf.predict(test_data)
     f1_score = metrics.f1_score(labels, prediction)
     recall_score = metrics.recall_score(labels, prediction)
     precision_score = metrics.precision_score(labels, prediction)
@@ -86,14 +92,17 @@ def test_model(clf, test_data, labels, prefix=None):
     }
 
 
-def train_model(clf, train_data, labels, prefix=None):
+def train_model(clf, train_data, labels, prefix=None, fit_kwargs=None, is_lstm=False):
     if not prefix:
         prefix = 'train'
-    clf.fit(train_data, labels)
-    return test_model(clf, train_data, labels, prefix=prefix)
+    if fit_kwargs:
+        clf.fit(train_data, labels, **fit_kwargs)
+    else:
+        clf.fit(train_data, labels)
+    return test_model(clf, train_data, labels, prefix=prefix, is_lstm=is_lstm)
 
 
-def validate_model(clf, train_data, labels, folds=10, print_debug=False):
+def validate_model(clf, train_data, labels, folds=10, print_debug=False, fit_kwargs=None, is_lstm=False):
     f1_scores = []
     recall_scores = []
     precision_scores = []
@@ -106,21 +115,31 @@ def validate_model(clf, train_data, labels, folds=10, print_debug=False):
     train_roc_auc_scores = []
     train_kappa_scores = []
     train_matthews = []
-
-    for i in range(folds - 1):
+    step_size = 3
+    for i in range(step_size, folds, step_size):
         if print_debug:
-            print('Training fold ', i)
-        x_fold_train, y_fold_train, x_fold_test, y_fold_test = _divide_folds(train_data, labels, i, folds=folds)
+            print('Training fold ', i, len(train_data))
+        x_fold_train, y_fold_train, x_fold_test, y_fold_test = _divide_folds(
+            train_data, labels, i, folds=folds, step_size=step_size, print_debug=print_debug)
+        if fit_kwargs:
+            clf.fit(x_fold_train, y_fold_train, **fit_kwargs)
+        else:
+            clf.fit(x_fold_train, y_fold_train)
+        if is_lstm:
+            prediction = clf.predict_classes(x_fold_test)
+        else:
+            prediction = clf.predict(x_fold_test)
 
-        clf.fit(x_fold_train, y_fold_train)
-        prediction = clf.predict(x_fold_test)
         f1_scores.append(metrics.f1_score(y_fold_test, prediction))
         recall_scores.append(metrics.recall_score(y_fold_test, prediction))
         precision_scores.append(metrics.precision_score(y_fold_test, prediction))
         kappa_scores.append(metrics.cohen_kappa_score(y_fold_test, prediction))
         matthews_scores.append(metrics.matthews_corrcoef(y_fold_test, prediction))
 
-        train_prediction = clf.predict(x_fold_train)
+        if is_lstm:
+            train_prediction = clf.predict_classes(x_fold_train)
+        else:
+            train_prediction = clf.predict(x_fold_train)
         train_f1_scores.append(metrics.f1_score(y_fold_train, train_prediction))
         train_recall_scores.append(metrics.recall_score(y_fold_train, train_prediction))
         train_precision_scores.append(metrics.precision_score(y_fold_train, train_prediction))
