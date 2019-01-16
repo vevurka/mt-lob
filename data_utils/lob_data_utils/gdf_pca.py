@@ -138,7 +138,7 @@ class SvmGdfResults(object):
         logger.info('Finished training %s %s', self.stock, {**res, **test_scores})
         return {**res, **test_scores}
 
-    def train_lstm(self, clf, feature_name='', should_validate=True, method=None, fit_kwargs=None):
+    def train_lstm(self, clf, feature_name='', should_validate=True, method=None, fit_kwargs=None, plot_name=None):
         logger.info('Training %s r=%s s=%s: clf=%s', self.stock, self.r, self.s, clf)
         n_components = self.get_number_of_pca_components(feature_name)
         train_x = self.df[self.feature_columns_dict[feature_name]].values
@@ -154,7 +154,7 @@ class SvmGdfResults(object):
 
         if should_validate:
             scores_arrays = model.validate_model(clf, train_x, self.df['mid_price_indicator'].values,
-                                                 fit_kwargs=fit_kwargs, is_lstm=True)
+                                                 fit_kwargs=fit_kwargs, is_lstm=True, plot_name=plot_name)
             scores = self.get_mean_scores(scores_arrays)
         else:
             scores = model.train_model(clf, train_x, self.df['mid_price_indicator'].values,

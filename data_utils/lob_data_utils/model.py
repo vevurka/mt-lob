@@ -1,6 +1,7 @@
 import unittest
 import numpy as np
 from sklearn import metrics
+import matplotlib.pyplot as plt
 
 
 class TestValidateModel(unittest.TestCase):
@@ -95,14 +96,14 @@ def test_model(clf, test_data, labels, prefix=None, is_lstm=False):
 def train_model(clf, train_data, labels, prefix=None, fit_kwargs=None, is_lstm=False):
     if not prefix:
         prefix = 'train'
-    if fit_kwargs:
+    if fit_kwargs and is_lstm:
         clf.fit(train_data, labels, **fit_kwargs)
     else:
         clf.fit(train_data, labels)
     return test_model(clf, train_data, labels, prefix=prefix, is_lstm=is_lstm)
 
 
-def validate_model(clf, train_data, labels, folds=10, print_debug=False, fit_kwargs=None, is_lstm=False):
+def validate_model(clf, train_data, labels, folds=10, print_debug=False, fit_kwargs=None, is_lstm=False, plot_name=None):
     f1_scores = []
     recall_scores = []
     precision_scores = []
@@ -151,6 +152,12 @@ def validate_model(clf, train_data, labels, folds=10, print_debug=False, fit_kwa
         except ValueError as e:
             roc_auc_scores.append(np.nan)
             train_roc_auc_scores.append(metrics.roc_auc_score(y_fold_train, train_prediction))
+    if fit_kwargs and is_lstm and plot_name:
+        history = clf.fit(train_data, labels, **fit_kwargs)
+        for k in history.history.keys():
+            plt.figure()
+            plt.plot(history.history[k])
+            plt.savefig(f'{plot_name}_{k}.png')
     return {
         'precision': precision_scores,
         'f1': f1_scores,

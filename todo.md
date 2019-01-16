@@ -1,5 +1,8 @@
 # TODO
 
+0. repeat all results for new validation method - specifically svms on queue imbalance and mlp with pca.
+use approach with r,s adjusted for the procedure.
+
 1. It is clear that gdf parameters can be choosen depending on a stock market prices/volumes 
 (most probably volumes) - differences between gdfs (regarding params r s ) - apply some clustering to visualize?
 
@@ -27,6 +30,17 @@ correlations between Pcaed gdfs and mid price indicator for different r and s
 11. add h! for all tables in figures 
 
 ## TODO reading
+
+12. Read http://www.bioinf.jku.at/publications/older/2604.pdf [15]
+
+1. Read [13]
+
+1. Read On stock return prediction with LSTM networks [14]
+
+0. Stock Price Prediction Using Attention-based Multi-Input LSTM [12]
+1. Read Genetic Algorithm-Optimized Long Short-Term Memory Network for Stock Market Prediction [11]
+
+1. Read [9] Stock Price Correlation Coefficient Prediction with ARIMA-LSTM Hybrid Model
 
 0. Read [8]. Check http://di.ulb.ac.be/map/gbonte/ftp/time_ser.pdf
 0. check Prediction of hidden liquidity in the limit order book of globex futures. for the gaussian model.
@@ -163,7 +177,19 @@ Title of thesis is "feature selection for limit order book"?
 
 8. Evaluating and Comparing Classifiers: Review, Some Recommendations and Limitations [7]
 
+10. https://arxiv.org/pdf/1808.01560.pdf [9]
+
 9. Machine Learning Strategies for Time Series Forecasting [8]
+
+11. Genetic Algorithm-Optimized Long Short-Term Memory Network for Stock Market Prediction [11]
+0. Stock Price Prediction Using Attention-based Multi-Input LSTM [12]
+
+12. Stock Market Trend Prediction Using Recurrent Convolutional Neural Networks [13]
+
+1. Read On stock return prediction with LSTM networks [14]
+
+12. Read http://www.bioinf.jku.at/publications/older/2604.pdf [15]
+
 
 10. https://machinelearningmastery.com/time-series-forecasting-supervised-learning/
 
