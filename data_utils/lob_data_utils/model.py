@@ -116,8 +116,8 @@ def validate_model(clf, train_data, labels, folds=10, print_debug=False, fit_kwa
     train_roc_auc_scores = []
     train_kappa_scores = []
     train_matthews = []
-    step_size = 3
-    for i in range(step_size, folds, step_size):
+    step_size = 5
+    for i in range(step_size, folds, 1):
         if print_debug:
             print('Training fold ', i, len(train_data))
         x_fold_train, y_fold_train, x_fold_test, y_fold_test = _divide_folds(
@@ -158,6 +158,7 @@ def validate_model(clf, train_data, labels, folds=10, print_debug=False, fit_kwa
             plt.figure()
             plt.plot(history.history[k])
             plt.savefig(f'{plot_name}_{k}.png')
+    train_scores = train_model(clf, train_data, labels, fit_kwargs=fit_kwargs, is_lstm=is_lstm)
     return {
         'precision': precision_scores,
         'f1': f1_scores,
@@ -165,10 +166,11 @@ def validate_model(clf, train_data, labels, folds=10, print_debug=False, fit_kwa
         'roc_auc': roc_auc_scores,
         'kappa': kappa_scores,
         'matthews': matthews_scores,
-        'train_precision': train_precision_scores,
-        'train_f1': train_f1_scores,
-        'train_recall': train_recall_scores,
-        'train_roc_auc': train_roc_auc_scores,
-        'train_kappa': train_kappa_scores,
-        'train_matthews': train_matthews
+        'train_val_precision': train_precision_scores,
+        'train_val_f1': train_f1_scores,
+        'train_val_recall': train_recall_scores,
+        'train_val_roc_auc': train_roc_auc_scores,
+        'train_val_kappa': train_kappa_scores,
+        'train_val_matthews': train_matthews,
+        **train_scores
     }
