@@ -58,12 +58,12 @@ class TestValidateModel(unittest.TestCase):
 def _divide_folds(x, y, i, folds=10, step_size=3, print_debug=False):
     fold_size = len(x) // (folds + 1)
     if print_debug:
-        print('train: ', (i + 1 - step_size) * fold_size , (i + 1) * fold_size)
-        print('val:', (i + 1) * fold_size, (i + 2) * fold_size)
-    x_fold_train = x[(i + 1 - step_size) * fold_size: (i + 1) * fold_size]
-    y_fold_train = y[(i + 1 - step_size) * fold_size: (i + 1) * fold_size]
-    x_fold_test = x[(i + 1) * fold_size: (i + 2) * fold_size]
-    y_fold_test = y[(i + 1) * fold_size: (i + 2) * fold_size]
+        print('train: ', (i - step_size) * fold_size , i * fold_size)
+        print('val:', (i + 0) * fold_size, (i + 2) * fold_size)
+    x_fold_train = x[(i - step_size) * fold_size: i * fold_size]
+    y_fold_train = y[(i - step_size) * fold_size: i * fold_size]
+    x_fold_test = x[(i + 0) * fold_size: (i + 2) * fold_size]
+    y_fold_test = y[(i + 0) * fold_size: (i + 2) * fold_size]
     return x_fold_train, y_fold_train, x_fold_test, y_fold_test
 
 
