@@ -63,6 +63,7 @@ class SvmGdfResults(object):
         'pca_gdf_que8': all_gdf_que,
         'pca_gdf_que9': all_gdf_que,
         'pca_gdf_que10': all_gdf_que,
+        'pca_n_gdf_que': all_gdf_que,
         'pca_gdf_que_prev1': all_gdf_que_prev,
         'pca_gdf_que_prev2': all_gdf_que_prev,
         'pca_gdf_que_prev3': all_gdf_que_prev,
@@ -73,6 +74,7 @@ class SvmGdfResults(object):
         'pca_gdf_que_prev8': all_gdf_que_prev,
         'pca_gdf_que_prev9': all_gdf_que_prev,
         'pca_gdf_que_prev10': all_gdf_que_prev,
+        'pca_n_gdf_que_prev': all_gdf_que_prev,
         'pca_gdf_que_prev_split10': all_gdf_que_prev
     }
 
@@ -102,7 +104,7 @@ class SvmGdfResults(object):
             mean_scores[k] = np.mean(v)
         return mean_scores
 
-    def get_score_for_clf_split_pca(self, clf, df_test, feature_name, pca=None):
+    def get_score_for_clf_split_pca(self, clf, df_test, feature_name, pca=None) -> dict:
         x_test = df_test[self.feature_columns_dict[feature_name]]
         x_test_pca = x_test[[col for col in x_test.columns if 'gdf' in col]]
         x_test = x_test[[col for col in x_test.columns if 'gdf' not in col]]
@@ -113,7 +115,32 @@ class SvmGdfResults(object):
         y_test = df_test['mid_price_indicator'].values
         return model.test_model(clf, x_test, y_test)
 
+    def get_pca(self, feature_name) -> Optional[PCA]:
+        train_x = self.df[self.feature_columns_dict[feature_name]].values
+        if feature_name == 'pca_n_gdf_que' or feature_name == 'pca_n_gdf_que_prev':
+            n_components = self.calculate_number_of_components(train_x, threshold=0.99)
+        else:
+            n_components = self.get_number_of_pca_components(feature_name)
+        if n_components:
+            pca = PCA(n_components=n_components)
+            pca.fit(train_x)
+            return pca
+        return None
+
+    @classmethod
+    def calculate_number_of_components(cls, train_x, threshold=0.99) -> int:
+        pca = PCA(n_components=10)
+        pca.fit(train_x)
+        for i in range(1, len(pca.explained_variance_ratio_)):
+            sum_of_ratio = np.sum(pca.explained_variance_ratio_[0:i])
+            if sum_of_ratio > threshold:
+                return i
+        return 10
+
     def train_clf_with_split_pca(self, clf, feature_name, method=None):
+        """
+        Deprecated
+        """
         logger.info('Training %s r=%s s=%s:',
                     self.stock, self.r, self.s)
         train_x = self.df[self.feature_columns_dict[feature_name]]
@@ -138,14 +165,15 @@ class SvmGdfResults(object):
         logger.info('Finished training %s %s', self.stock, {**res, **test_scores})
         return {**res, **test_scores}
 
-    def train_lstm(self, clf, feature_name='', should_validate=True, method=None, fit_kwargs=None, plot_name=None):
+    def train_lstm(self, clf, feature_name='', should_validate=True, method=None, fit_kwargs=None, compile_kwargs=None,
+                   plot_name=None):
         logger.info('Training %s r=%s s=%s: clf=%s', self.stock, self.r, self.s, clf)
-        n_components = self.get_number_of_pca_components(feature_name)
+
         train_x = self.df[self.feature_columns_dict[feature_name]].values
         test_x = self.df_test[self.feature_columns_dict[feature_name]].values
-        if n_components:
-            pca = PCA(n_components=n_components)
-            pca.fit(train_x)
+
+        pca = self.get_pca(feature_name)
+        if pca:
             train_x = pca.transform(train_x)
             test_x = pca.transform(test_x)
 
@@ -154,19 +182,28 @@ class SvmGdfResults(object):
 
         if should_validate:
             scores_arrays = model.validate_model(clf, train_x, self.df['mid_price_indicator'].values,
-                                                 fit_kwargs=fit_kwargs, is_lstm=True, plot_name=plot_name)
+                                                 fit_kwargs=fit_kwargs, compile_kwargs=compile_kwargs,
+                                                 is_lstm=True, plot_name=plot_name)
             scores = self.get_mean_scores(scores_arrays)
         else:
             scores = model.train_model(clf, train_x, self.df['mid_price_indicator'].values,
+                                       compile_kwargs=compile_kwargs,
                                        fit_kwargs=fit_kwargs, is_lstm=True)
         if not method:
             method = 'lstm'
+        components_num = None
+        if pca:
+            components_num = pca.n_components_
         res = {
             **scores,
             'stock': self.stock,
             'kernel': method,
-            'features': feature_name
+            'features': feature_name,
+            'pca_components': components_num
         }
+        model.train_model(clf, train_x, self.df['mid_price_indicator'].values,
+                          compile_kwargs=compile_kwargs,
+                          fit_kwargs=fit_kwargs, is_lstm=True) # to have a clean fitted model
         test_scores = model.test_model(clf, test_x, self.df_test['mid_price_indicator'].values, is_lstm=True)
         logger.info('Finished training %s %s', self.stock, {**res, **test_scores})
         return {**res, **test_scores}
@@ -175,11 +212,8 @@ class SvmGdfResults(object):
         logger.info('Training %s r=%s s=%s: clf=%s',
                     self.stock, self.r, self.s, clf)
         train_x = self.df[self.feature_columns_dict[feature_name]]
-        n_components = self.get_number_of_pca_components(feature_name)
-        pca = None
-        if n_components:
-            pca = PCA(n_components=n_components)
-            pca.fit(train_x)
+        pca = self.get_pca(feature_name)
+        if pca:
             train_x = pca.transform(train_x)
         if should_validate:
             scores_arrays = model.validate_model(clf, train_x, self.df['mid_price_indicator'])
@@ -188,11 +222,15 @@ class SvmGdfResults(object):
             scores = model.train_model(clf, train_x, self.df['mid_price_indicator'])
         if not method:
             method = 'logistic'
+        components_num = None
+        if pca:
+            components_num = pca.n_components_
         res = {
             **scores,
             'stock': self.stock,
             'kernel': method,
-            'features': feature_name
+            'features': feature_name,
+            'pca_components': components_num
         }
         test_scores = self.get_score_for_clf(clf, self.df_test, feature_name=feature_name, pca=pca)
         logger.info('Finished training %s %s', self.stock, {**res, **test_scores})
@@ -208,17 +246,17 @@ class SvmGdfResults(object):
         else:
             clf = SVC(kernel=kernel)
         train_x = self.df[self.feature_columns_dict[feature_name]]
-        n_components = self.get_number_of_pca_components(feature_name)
-        pca = None
-        if n_components:
-            pca = PCA(n_components=n_components)
-            pca.fit(train_x)
+        pca = self.get_pca(feature_name)
+        if pca:
             train_x = pca.transform(train_x)
         if should_validate:
             scores_arrays = model.validate_model(clf, train_x, self.df['mid_price_indicator'])
             scores = self.get_mean_scores(scores_arrays)
         else:
             scores = model.train_model(clf, train_x, self.df['mid_price_indicator'])
+        components_num = None
+        if pca:
+            components_num = pca.n_components_
         res = {
             **scores,
             'stock': self.stock,
@@ -226,7 +264,8 @@ class SvmGdfResults(object):
             'gamma': gamma,
             'coef0': coef0,
             'kernel': kernel,
-            'features': feature_name
+            'features': feature_name,
+            'pca_components': components_num
         }
         test_scores = self.get_score_for_clf(clf, self.df_test, feature_name=feature_name, pca=pca)
         logger.info('Finished training %s %s', self.stock, {**res, **test_scores})

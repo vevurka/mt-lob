@@ -93,17 +93,25 @@ def test_model(clf, test_data, labels, prefix=None, is_lstm=False):
     }
 
 
-def train_model(clf, train_data, labels, prefix=None, fit_kwargs=None, is_lstm=False):
+def train_model(clf, train_data, labels, prefix=None, fit_kwargs=None, compile_kwargs=None, is_lstm=False):
     if not prefix:
         prefix = 'train'
-    if fit_kwargs and is_lstm:
+    if is_lstm:
+        if not fit_kwargs or not compile_kwargs:
+            raise Exception('You need to set fit and compile kwargs for LSTM')
+    if fit_kwargs and is_lstm and compile_kwargs:
+        clf.compile(**compile_kwargs)
         clf.fit(train_data, labels, **fit_kwargs)
     else:
         clf.fit(train_data, labels)
     return test_model(clf, train_data, labels, prefix=prefix, is_lstm=is_lstm)
 
 
-def validate_model(clf, train_data, labels, folds=10, print_debug=False, fit_kwargs=None, is_lstm=False, plot_name=None):
+def validate_model(clf, train_data, labels, folds=10, print_debug=False, fit_kwargs=None, compile_kwargs=None,
+                   is_lstm=False, plot_name=None):
+    if is_lstm:
+        if not fit_kwargs or not compile_kwargs:
+            raise Exception('You need to set fit and compile kwargs for LSTM')
     f1_scores = []
     recall_scores = []
     precision_scores = []
@@ -122,7 +130,8 @@ def validate_model(clf, train_data, labels, folds=10, print_debug=False, fit_kwa
             print('Training fold ', i, len(train_data))
         x_fold_train, y_fold_train, x_fold_test, y_fold_test = _divide_folds(
             train_data, labels, i, folds=folds, step_size=step_size, print_debug=print_debug)
-        if fit_kwargs:
+        if fit_kwargs and is_lstm and compile_kwargs:
+            clf.compile(**compile_kwargs)
             clf.fit(x_fold_train, y_fold_train, **fit_kwargs)
         else:
             clf.fit(x_fold_train, y_fold_train)
@@ -158,7 +167,9 @@ def validate_model(clf, train_data, labels, folds=10, print_debug=False, fit_kwa
             plt.figure()
             plt.plot(history.history[k])
             plt.savefig(f'{plot_name}_{k}.png')
-    train_scores = train_model(clf, train_data, labels, fit_kwargs=fit_kwargs, is_lstm=is_lstm)
+            plt.close('all')
+    train_scores = train_model(clf, train_data, labels, fit_kwargs=fit_kwargs, compile_kwargs=compile_kwargs,
+                               is_lstm=is_lstm)
     return {
         'precision': precision_scores,
         'f1': f1_scores,
