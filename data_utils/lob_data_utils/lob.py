@@ -2,21 +2,18 @@ import os
 
 import pandas as pd
 
-from typing import Tuple, Sequence
+from typing import Tuple, Sequence, Optional
 from datetime import datetime
 
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
-from sklearn.linear_model import LogisticRegressionCV, LinearRegression
 from sklearn.model_selection import learning_curve
-from sklearn import svm
 import numpy as np
 
 import warnings
 
 from sklearn.metrics import roc_auc_score, roc_curve, f1_score, precision_recall_curve
 
-from lob_data_utils import db_result
 
 warnings.filterwarnings('ignore')
 
@@ -62,7 +59,8 @@ def parse_data(filename: str) -> pd.DataFrame:
     return df
 
 
-def load_prepared_data(stock: str, data_dir=None, cv=False, length=5050, include_test=True) -> Sequence[pd.DataFrame]:
+def load_prepared_data(stock: str, data_dir=None, length=5050,
+                       include_test=True) -> Sequence[Optional[pd.DataFrame]]:
     if data_dir is None:
         data_dir = 'data/prepared/'
     df = pd.read_csv(os.path.join(data_dir, stock + '.csv'))
@@ -72,34 +70,28 @@ def load_prepared_data(stock: str, data_dir=None, cv=False, length=5050, include
         if length > len(df):
             # print('Not enough data for {} actual len: {},
             # wanted len: {}'.format(stock, len(df), length))
-            return None, None, None
-        return prepare_dataset(stock, df[0:length], cv=cv, include_test=include_test)
+            return None, None
+        return prepare_dataset(stock, df[0:length], include_test=include_test)
     else:
-        return prepare_dataset(stock, df, cv=cv, include_test=include_test)
+        return prepare_dataset(stock, df, include_test=include_test)
 
 
-def prepare_dataset(stock: str, df: pd.DataFrame, cv=False, include_test=True) -> Sequence[pd.DataFrame]:
+def prepare_dataset(stock: str, df: pd.DataFrame, include_test=True) -> Sequence[pd.DataFrame]:
     idx = len(df) // 5
-    train = df.iloc[idx:len(df)]
-    test = df.iloc[0:idx]
-    if cv:
-        df_cv = train.iloc[len(train) - idx:len(train)]
-        train = train.iloc[0:len(train) - idx]
+    train = df.iloc[0:4*idx]
+    test = df.iloc[4*idx:len(df)]
 
     # print('Training set length for {}: {}'.format(stock, len(train)))
     # print('Testing set length for {}: {}'.format(stock, len(test)))
 
-    if cv:
-        # print('Cross-validation set length for {}: {}'.format(stock, len(df_cv)))
-        return train, df_cv, test
-    elif include_test:
+    if include_test:
         return train, test
     else:
         #print('no test or train')
-        return df
+        return df, None
 
 
-def load_data(stock: str, data_dir=None, cv=False, include_test=True, should_add_mid_avg=False) -> Sequence[pd.DataFrame]:
+def load_data(stock: str, data_dir=None, include_test=True) -> Sequence[pd.DataFrame]:
     if data_dir is None:
         data_dir = 'data/LOB/'
     train_dates = ['0901', '0916', '1001', '1016', '1101']
@@ -107,14 +99,14 @@ def load_data(stock: str, data_dir=None, cv=False, include_test=True, should_add
     for date in train_dates:
         print(date)
         dfs = parse_data(data_dir + 'OrderBookSnapshots_{}_{}.csv'.format(stock, date))
-        dfs = dfs.between_time('9:00', '15:00')
+        dfs = dfs.between_time('8:30', '16:00')
         df = df.append(dfs)
     print('finished parsing')
     df = df.sort_index()
     df = df.reindex()
-    df = prepare_dataframe(df, should_add_mid_avg=should_add_mid_avg)
+    df = prepare_dataframe(df)
     
-    return prepare_dataset(stock, df, cv=cv, include_test=include_test)
+    return prepare_dataset(stock, df, include_test=include_test)
 
 
 def get_bid_price(df: pd.DataFrame, index: int) -> float:
@@ -129,30 +121,6 @@ def get_ask_price(df: pd.DataFrame, index: int) -> float:
     if not np.any(ask_list):
         return 0
     return np.min([price for price, vol in ask_list])
-
-
-def add_prev_mid_price_avg(df: pd.DataFrame, k=10) -> pd.DataFrame:
-    print('adding prev mid', k)
-    previous_mid_prices = []
-    for i in range(len(df)):
-        if i < k:
-            previous_mid_prices.append(None)
-        else:
-            previous_mid_prices.append(np.sum(df.iloc[i-k:i]['mid_price'])/k)
-    df['prev_mid_price_avg_{}'.format(k)] = previous_mid_prices
-    return df
-
-
-def add_next_mid_price_avg(df: pd.DataFrame, k=10) -> pd.DataFrame:
-    print('adding next mid', k)
-    previous_mid_prices = []
-    for i in range(len(df)):
-        if i > len(df) - k - 1:
-            previous_mid_prices.append(None)
-        else:
-            previous_mid_prices.append(np.sum(df.iloc[i:i+k]['mid_price'])/k)
-    df['next_mid_price_avg_{}'.format(k)] = previous_mid_prices
-    return df
 
 
 def get_mid_price(df: pd.DataFrame, index: int) -> float:
@@ -194,25 +162,6 @@ def add_mid_price_indicator(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def add_mid_price_avg_indicator(df: pd.DataFrame, k=10, alpha=0.0) -> pd.DataFrame:
-    # TODO: what is alpha
-    prev_col_name = 'prev_mid_price_avg_{}'.format(k)
-    next_col_name = 'next_mid_price_avg_{}'.format(k)
-    if prev_col_name not in df.columns or next_col_name not in df.columns:
-        print(prev_col_name, next_col_name, 'not in dataframe')
-        return df
-    mid_price_avg_inds = []
-    for i, row in df.iterrows():
-        if row[next_col_name] > row[prev_col_name]: #* (1 + alpha):
-            mid_price_avg_inds.append(1)
-        else:
-            mid_price_avg_inds.append(0)
-        # else:
-        #     mid_price_avg_inds.append(0)
-    df['mid_price_avg_indicator_{}'.format(k)] = mid_price_avg_inds
-    return df
-
-
 def add_queue_imbalance(df: pd.DataFrame) -> pd.DataFrame:
     queue_imbalances = []
     for i in range(0, len(df)):
@@ -221,7 +170,7 @@ def add_queue_imbalance(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def prepare_dataframe(df, should_add_mid_avg=False):
+def prepare_dataframe(df):
     df['bid_price'] = [get_bid_price(df, i) for i in range(len(df))]
     df['ask_price'] = [get_ask_price(df, i) for i in range(len(df))]
     df['mid_price'] = [get_mid_price(df, i) for i in range(len(df))]
@@ -229,41 +178,18 @@ def prepare_dataframe(df, should_add_mid_avg=False):
                           range(len(df))]
     df['sum_buy_bid'] = [sum_buy_active_orders(get_bid_price(df, i), df, i) for i in
                          range(len(df))]
-    if should_add_mid_avg:
-        ks = [2, 5, 10, 20, 50]
-        for k in ks:
-            df = add_next_mid_price_avg(df, k=k)
-            df = add_prev_mid_price_avg(df, k=k)
-            df = add_mid_price_avg_indicator(df, k=k) # TODO: alpha is removed
-            # TODO: alpha could be 0.75 quantile or mid price changes
 
     rows_to_remove = []
     print('prepare for row removal')
-    for i in range(len(df) - 1, 0, -1):
-        if df['mid_price'].iloc[i] == df['mid_price'].iloc[i - 1]:
-            rows_to_remove.append(i)
+    # for i in range(len(df) - 1, 0, -1):
+    #     if df['mid_price'].iloc[i] == df['mid_price'].iloc[i - 1]:
+    #         rows_to_remove.append(i)
 
-    for r in rows_to_remove:  # rows_to_remove is reversed so we can just remove
-        df = df.drop(df.index[r])
+    # for r in rows_to_remove:  # rows_to_remove is reversed so we can just remove
+    #     df = df.drop(df.index[r])
     df = add_mid_price_indicator(df)
     df = add_queue_imbalance(df)
     return df
-
-
-def svm_classification(df, start_idx, end_idx):
-    clf = svm.SVC(probability=True)
-    X = df['queue_imbalance'][start_idx:end_idx].values.reshape(-1, 1)
-    y = df['mid_price_indicator'][start_idx:end_idx].values.reshape(-1, 1)
-    clf.fit(X, y)
-    return clf
-
-
-def logistic_regression(df, start_idx, end_idx):
-    clf = LogisticRegressionCV(fit_intercept=True, solver='sag')
-    X = df['queue_imbalance'][start_idx:end_idx].values.reshape(-1, 1)
-    y = df['mid_price_indicator'][start_idx:end_idx].values.ravel()
-    clf.fit(X, y)
-    return clf
 
 
 def sigmoid(x):
@@ -480,32 +406,3 @@ def prepare_summary(stocks, dfs):
     df_summary['mean_bid_len'] = mean_bid_len
     df_summary['mean_ask_len'] = mean_ask_len
     return df_summary
-
-
-def get_data_for_data_length(data_length, data_type='cv'):
-    df_res_cv = pd.DataFrame(db_result.get_svm_results_for_data_length(data_length, data_type))
-
-    dfs = {}
-    dfs_test = {}
-    dfs_cv = {}
-
-    stocks = df_res_cv['stock'].unique()
-
-    for s in stocks:
-        d, d_cv, d_test = load_prepared_data(s, cv=True, length=data_length)
-        dfs[s] = d
-        dfs_test[s] = d_test
-
-    df_res_cv.drop('algorithm_id', axis=1, inplace=True)
-    df_res_cv.drop('svm_id', axis=1, inplace=True)
-    df_res_cv.drop('id', axis=1, inplace=True)
-    df_res_cv.drop('data_length', axis=1, inplace=True)
-    df_res_cv.drop('name', axis=1, inplace=True)
-    df_res_cv.drop('data_type', axis=1, inplace=True)
-    df_res_cv.head()
-
-    df_best_agg = df_res_cv.groupby('stock', as_index=False)['roc_auc_score'].idxmax()
-    df_bests = df_res_cv.loc[df_best_agg]
-    df_bests.index = df_bests['stock']
-    del df_res_cv
-    return (dfs, dfs_cv, dfs_test), df_bests
