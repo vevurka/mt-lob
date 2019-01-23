@@ -9,6 +9,7 @@ from keras import backend as K
 from keras.layers import Dense
 from keras.layers import LSTM
 from keras.models import Sequential
+from keras import regularizers
 from lob_data_utils import gdf_pca, roc_results
 from numpy.random import seed
 seed(1)
@@ -33,33 +34,52 @@ mcc = as_keras_metric(sklearn.metrics.matthews_corrcoef)
 
 def train_lstm(stock, r, s, data_length):
     gdf_filename_pattern = 'gdf_{}_' + 'len{}'.format(data_length) + '_r{}_s{}_K50'
-
     gdf_dfs = gdf_pca.SvmGdfResults(
         stock, r=r, s=s, data_length=data_length,
         gdf_filename_pattern=gdf_filename_pattern)
+    pca = gdf_dfs.get_pca('pca_n_gdf_que_prev')
+    units = [1, pca.n_components_, 2 * pca.n_components_, 20]
+    number_of_hidden_layers = [0, 1, 2]
+    regularization = [0, 0.1, 0.01]
 
-    units = [1, 64, 128]
-    scores = []
+    epochs = 5
+    batch_size = 10
+
     for unit in units:
-        # model = Sequential()
-        # model.add(LSTM(unit, input_shape=(1, 10)))
-        # model.add(Dense(1, activation='sigmoid'))
-        # model.compile(loss='binary_crossentropy', optimizer='adam', metrics=[auc_roc])
-        model = Sequential()
-        model.add(LSTM(unit, input_shape=(1, 10)))
-        model.add(Dense(unit, input_shape=(unit, 1), activation='tanh'))
-        #  model.add(Dropout(0.1, input_shape=(128, 1)))
-        model.add(Dense(1, input_shape=(unit, 1), activation='sigmoid'))
-        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=[auc_roc])
-        plot_name = f'plot_lstm/{stock}_u{unit}_r{r}_s{s}'
-        score = gdf_dfs.train_lstm(model, feature_name='pca_gdf_que_prev10',
-                                   fit_kwargs={'epochs': 50, 'batch_size': 100, 'verbose': 0}, plot_name=plot_name)
-        score = {**score, 'unit': unit}
-        scores.append(score)
-    df_scores = pd.DataFrame(scores)
-    df_scores.to_csv(
-        os.path.join('res_lstm', f'res_lstm_{gdf_dfs.stock}_len{gdf_dfs.data_length}_r{gdf_dfs.r}_s{gdf_dfs.s}.csv'))
-    return df_scores
+        scores = []
+        filename = os.path.join(
+            'res_lstm_reg_small', f'res_lstm_reg_pca_n_{stock}_u{unit}_len{data_length}_r{r}_s{s}.csv')
+        if os.path.exists(filename):
+            print(f'Exists {filename}.')
+            return None
+        for hidden_layer, reg in zip(number_of_hidden_layers, regularization):
+
+            model = Sequential()
+            model.add(LSTM(unit, input_shape=(1, pca.n_components_)))
+
+            for i in range(hidden_layer):
+                if reg == 0:
+                    model.add(Dense(unit, input_shape=(unit, 1), activation='tanh'))
+                else:
+                    model.add(Dense(unit, input_shape=(unit, 1), activation='tanh',
+                                    kernel_regularizer=regularizers.l2(reg)))
+
+            model.add(Dense(1, input_shape=(unit, 1), activation='sigmoid'))
+            model.compile(loss='binary_crossentropy', optimizer='adam', metrics=[auc_roc])
+            plot_name = f'plot_lstm_reg_small/{stock}_u{unit}_h{hidden_layer}_reg{reg}_pca_n_r{r}_s{s}'
+            score = gdf_dfs.train_lstm(model, feature_name='pca_n_gdf_que_prev',
+                                       fit_kwargs={'epochs': epochs, 'batch_size': batch_size, 'verbose': 0,
+                                                   'shuffle': False},
+                                       compile_kwargs={'loss': 'binary_crossentropy',
+                                                       'optimizer': 'adam',
+                                                       'metrics': [auc_roc]},
+                                       plot_name=plot_name)
+            score = {**score, 'unit': unit, 'hidden_layer': hidden_layer, 'regularization': reg,
+                     'epochs': epochs, 'batch_size': batch_size }
+            scores.append(score)
+        df_scores = pd.DataFrame(scores)
+        df_scores.to_csv(filename)
+    return None
 
 
 def main():
@@ -68,9 +88,17 @@ def main():
     data_length = 10000
     rs = [(0.1, 0.1)]  # (1.0, 1.0), (0.1, 1.0), (1.0, 0.1), (0.01, 0.1)]
     stocks = list(roc_results.result_cv_10000.keys())
-    pool = Pool(processes=5)
+    pool = Pool(processes=3)
 
     res = [pool.apply_async(train_lstm, [s, 0.1, 0.1, data_length]) for s in stocks]
+    print([r.get() for r in res])
+    res = [pool.apply_async(train_lstm, [s, 0.01, 0.1, data_length]) for s in stocks]
+    print([r.get() for r in res])
+    res = [pool.apply_async(train_lstm, [s, 1.0, 0.1, data_length]) for s in stocks]
+    print([r.get() for r in res])
+    res = [pool.apply_async(train_lstm, [s, 0.1, 1.0, data_length]) for s in stocks]
+    print([r.get() for r in res])
+    res = [pool.apply_async(train_lstm, [s, 1.0, 1.0, data_length]) for s in stocks]
     print([r.get() for r in res])
 
 

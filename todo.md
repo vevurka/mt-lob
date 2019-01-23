@@ -3,12 +3,14 @@
 0. repeat all results for new validation method - specifically svms on queue imbalance and mlp with pca.
 use approach with r,s adjusted for the procedure.
 
+2. entropy (f.e. svm_for_lobs mentions this [3]), t-test, rejecting hyposthesis
+
 1. It is clear that gdf parameters can be choosen depending on a stock market prices/volumes 
 (most probably volumes) - differences between gdfs (regarding params r s ) - apply some clustering to visualize?
 
 0. comparision visualization bar plot or something like that for case study
 
-0. in results pca gdf notebooks we need to recalculate best classification to truly compare results.
+0. in results pca gdf notebooks we need to recalculate best classification to truly compare results. - nah, maybe
 11. prepare notebooks for overview of how pca on gdf looks - think about visualizations of PCA, look at 
 correlations between Pcaed gdfs and mid price indicator for different r and s  
 
@@ -16,9 +18,7 @@ correlations between Pcaed gdfs and mid price indicator for different r and s
 
 ## TODO mgr
 
-3. Describe Benchmark Dataset for Mid-Price Forecasting  [6]
-11. Read Mid-price Prediction Based on Machine Learning Methods [5]
-2. Check bibliography of [5], add [5] to bibliography
+
 8. Describe Recall/Precision/TPR/FPR, Matthews Correlation Coefficient
 11. Describe paper: Modeling high-frequency limit order book dynamics with support vector machines. Add it to bib.
 
@@ -31,24 +31,15 @@ correlations between Pcaed gdfs and mid price indicator for different r and s
 
 ## TODO reading
 
+13. Read [16]
 12. Read http://www.bioinf.jku.at/publications/older/2604.pdf [15]
-
 1. Read [13]
-
 1. Read On stock return prediction with LSTM networks [14]
-
-0. Stock Price Prediction Using Attention-based Multi-Input LSTM [12]
-1. Read Genetic Algorithm-Optimized Long Short-Term Memory Network for Stock Market Prediction [11]
-
-1. Read [9] Stock Price Correlation Coefficient Prediction with ARIMA-LSTM Hybrid Model
-
 0. Read [8]. Check http://di.ulb.ac.be/map/gbonte/ftp/time_ser.pdf
 0. check Prediction of hidden liquidity in the limit order book of globex futures. for the gaussian model.
 1. ReRead the paper about lob: "Modeling high-frequency limit order book dynamics with support 
 vector machines" [3]
-3. Read Benchmark Dataset for Mid-Price - [6]
-3. How prediction works is well described in [5]
-4. Read [7]
+
 2. Read "Price jump prediction in Limit Order Book"
 10. Read: Classification-based Financial Markets Prediction using Deep Neural Networks
 12. Read:
@@ -60,6 +51,11 @@ vector machines" [3]
 9. Learn how to describe SVM mathematically
 10. Learn PCA 
 
+### TODO: maybe read
+
+1. Read [9] Stock Price Correlation Coefficient Prediction with ARIMA-LSTM Hybrid Model
+
+
 
 ## Ideas:
 
@@ -70,6 +66,15 @@ vector machines" [3]
 
 ## DONE
 
+1. Read Genetic Algorithm-Optimized Long Short-Term Memory Network for Stock Market Prediction [11]
+11. Read Mid-price Prediction Based on Machine Learning Methods [5]
+2. Check bibliography of [5], add [5] to bibliography
+
+0. Stock Price Prediction Using Attention-based Multi-Input LSTM [12]
+3. How prediction works is well described in [5]
+3. Read Benchmark Dataset for Mid-Price - [6]
+3. Describe Benchmark Dataset for Mid-Price Forecasting  [6]
+4. Read [7]
 
 0. Describe plots in Case Study chapter in mgr
 10. put all plots from svm part
@@ -167,28 +172,42 @@ Title of thesis is "feature selection for limit order book"?
 
 ## Useful
 
-3. Modeling high-frequency limit order book dynamics with support  vector machines [3]
+3. Modeling high-frequency limit order book dynamics with support  vector machines [3] - described
 
-4. Forecasting Stock Prices from the Limit Order Book using Convolution Neural Networks [4] 
+4. Forecasting Stock Prices from the Limit Order Book using Convolution Neural Networks [4]  - described
 
-5. Mid-price Prediction Based on Machine Learning Methods with Technical and Quantitative Indicators [5]
+5. Mid-price Prediction Based on Machine Learning Methods with Technical and Quantitative Indicators [5] - described
 
-6. Benchmark Dataset for Mid-Price Forecasting of Limit Order Book Data with Machine Learning Methods [6]
+6. Benchmark Dataset for Mid-Price Forecasting of Limit Order Book Data with Machine Learning Methods [6] - described
 
-8. Evaluating and Comparing Classifiers: Review, Some Recommendations and Limitations [7]
+8. Evaluating and Comparing Classifiers: Review, Some Recommendations and Limitations [7] - cited
 
-10. https://arxiv.org/pdf/1808.01560.pdf [9]
+10. https://arxiv.org/pdf/1808.01560.pdf [9] - nope
 
 9. Machine Learning Strategies for Time Series Forecasting [8]
 
 11. Genetic Algorithm-Optimized Long Short-Term Memory Network for Stock Market Prediction [11]
-0. Stock Price Prediction Using Attention-based Multi-Input LSTM [12]
+0. Stock Price Prediction Using Attention-based Multi-Input LSTM [12] - described a little bit
 
 12. Stock Market Trend Prediction Using Recurrent Convolutional Neural Networks [13]
 
 1. Read On stock return prediction with LSTM networks [14]
 
 12. Read http://www.bioinf.jku.at/publications/older/2604.pdf [15]
+
+13. https://www.econstor.eu/bitstream/10419/157808/1/886576210.pdf  Deep learning with long short-term memory networks for financial market
+predictions [16]
+
+14. https://arxiv.org/abs/1701.01887 Deep Learning for Time-Series Analysis [17]
+
+15. Neural Networks for Time Series Processing (1996) http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.45.5697
+
+16.  Sequence to Sequence Learning with Neural Networks https://arxiv.org/abs/1409.3215
+
+17. ftp://ftp.idsia.ch/pub/juergen/icann2001predict.pdf
+
+18. https://machinelearningmastery.com/promise-recurrent-neural-networks-time-series-forecasting/
+could be good for some introduction
 
 
 10. https://machinelearningmastery.com/time-series-forecasting-supervised-learning/
