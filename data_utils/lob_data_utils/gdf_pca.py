@@ -1,13 +1,11 @@
 import logging
-import os
 from typing import Optional
 
 import numpy as np
 import pandas as pd
-from lob_data_utils import lob, model, roc_results
+from lob_data_utils import lob, model
 from sklearn.decomposition import PCA
 from sklearn.svm import SVC
-
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +95,19 @@ class SvmGdfResults(object):
             return int(feature_name.replace('pca_gdf', ''))
         return None
 
+    @classmethod
+    def split_sequences(cls, sequences, labels, n_steps):
+        X, y = list(), list()
+        for i in range(len(sequences)):
+            end_ix = i + n_steps
+            if end_ix > len(sequences):
+                break
+            seq_x = sequences[i:end_ix]
+            lab = labels[end_ix - 1]
+            X.append(seq_x)
+            y.append(lab)
+        return np.array(X), np.array(y)
+
     @staticmethod
     def get_mean_scores(scores: dict) -> dict:
         mean_scores = {}
@@ -165,30 +176,38 @@ class SvmGdfResults(object):
         logger.info('Finished training %s %s', self.stock, {**res, **test_scores})
         return {**res, **test_scores}
 
-    def train_lstm(self, clf, feature_name='', should_validate=True, method=None, fit_kwargs=None, compile_kwargs=None,
-                   plot_name=None):
+    def train_lstm(self, clf, feature_name='', should_validate=True, method=None,
+                   fit_kwargs=None, compile_kwargs=None, n_steps=None,
+                   plot_name=None, class_weight=None):
         logger.info('Training %s r=%s s=%s: clf=%s', self.stock, self.r, self.s, clf)
 
         train_x = self.df[self.feature_columns_dict[feature_name]].values
         test_x = self.df_test[self.feature_columns_dict[feature_name]].values
+        train_y = self.df['mid_price_indicator'].values
+        test_y = self.df_test['mid_price_indicator'].values
 
         pca = self.get_pca(feature_name)
         if pca:
             train_x = pca.transform(train_x)
             test_x = pca.transform(test_x)
 
-        train_x = np.reshape(train_x, (train_x.shape[0], 1, train_x.shape[1]))
-        test_x = np.reshape(test_x, (test_x.shape[0], 1, test_x.shape[1]))
+        if n_steps:
+            train_x, train_y = self.split_sequences(train_x, train_y, n_steps=n_steps)
+            test_x, test_y = self.split_sequences(test_x, test_y, n_steps=n_steps)
+        else:
+
+            train_x = np.reshape(train_x, (train_x.shape[0], 1, train_x.shape[1]))
+            test_x = np.reshape(test_x, (test_x.shape[0], 1, test_x.shape[1]))
 
         if should_validate:
-            scores_arrays = model.validate_model(clf, train_x, self.df['mid_price_indicator'].values,
-                                                 fit_kwargs=fit_kwargs, compile_kwargs=compile_kwargs,
-                                                 is_lstm=True, plot_name=plot_name)
+            scores_arrays = model.validate_model(
+                clf, train_x, train_y, fit_kwargs=fit_kwargs, compile_kwargs=compile_kwargs,
+                is_lstm=True, plot_name=plot_name, class_weight=class_weight)
             scores = self.get_mean_scores(scores_arrays)
         else:
-            scores = model.train_model(clf, train_x, self.df['mid_price_indicator'].values,
-                                       compile_kwargs=compile_kwargs,
-                                       fit_kwargs=fit_kwargs, is_lstm=True)
+            scores = model.train_model(
+                clf, train_x, train_y, compile_kwargs=compile_kwargs, fit_kwargs=fit_kwargs, is_lstm=True,
+                class_weight=class_weight)
         if not method:
             method = 'lstm'
         components_num = None
@@ -201,14 +220,14 @@ class SvmGdfResults(object):
             'features': feature_name,
             'pca_components': components_num
         }
-        model.train_model(clf, train_x, self.df['mid_price_indicator'].values,
-                          compile_kwargs=compile_kwargs,
-                          fit_kwargs=fit_kwargs, is_lstm=True) # to have a clean fitted model
-        test_scores = model.test_model(clf, test_x, self.df_test['mid_price_indicator'].values, is_lstm=True)
+        model.train_model(
+            clf, train_x, train_y, compile_kwargs=compile_kwargs, fit_kwargs=fit_kwargs, is_lstm=True,
+            class_weight=class_weight) # to have a clean fitted model
+        test_scores = model.test_model(clf, test_x, test_y, is_lstm=True)
         logger.info('Finished training %s %s', self.stock, {**res, **test_scores})
         return {**res, **test_scores}
 
-    def train_clf(self, clf, feature_name='', should_validate=True, method=None):
+    def train_clf(self, clf, feature_name='', should_validate=True, method=None, class_weight=None):
         logger.info('Training %s r=%s s=%s: clf=%s',
                     self.stock, self.r, self.s, clf)
         train_x = self.df[self.feature_columns_dict[feature_name]]
@@ -216,10 +235,11 @@ class SvmGdfResults(object):
         if pca:
             train_x = pca.transform(train_x)
         if should_validate:
-            scores_arrays = model.validate_model(clf, train_x, self.df['mid_price_indicator'])
+            scores_arrays = model.validate_model(clf, train_x, self.df['mid_price_indicator'],
+                                                 class_weight=class_weight)
             scores = self.get_mean_scores(scores_arrays)
         else:
-            scores = model.train_model(clf, train_x, self.df['mid_price_indicator'])
+            scores = model.train_model(clf, train_x, self.df['mid_price_indicator'], class_weight=class_weight)
         if not method:
             method = 'logistic'
         components_num = None
@@ -236,7 +256,8 @@ class SvmGdfResults(object):
         logger.info('Finished training %s %s', self.stock, {**res, **test_scores})
         return {**res, **test_scores}
 
-    def train_svm(self, C=np.nan, gamma=np.nan, feature_name='', kernel='rbf', coef0=np.nan, should_validate=True):
+    def train_svm(self, C=np.nan, gamma=np.nan, feature_name='', kernel='rbf', coef0=np.nan, should_validate=True,
+                  class_weight=None):
         logger.info('Training %s r=%s s=%s: kernel=%s C=%s gamma=%s coef0=%s',
                     self.stock, self.r, self.s, kernel, C, gamma, coef0)
         if C and gamma and coef0:
@@ -250,10 +271,11 @@ class SvmGdfResults(object):
         if pca:
             train_x = pca.transform(train_x)
         if should_validate:
-            scores_arrays = model.validate_model(clf, train_x, self.df['mid_price_indicator'])
+            scores_arrays = model.validate_model(clf, train_x, self.df['mid_price_indicator'],
+                                                 class_weight=class_weight)
             scores = self.get_mean_scores(scores_arrays)
         else:
-            scores = model.train_model(clf, train_x, self.df['mid_price_indicator'])
+            scores = model.train_model(clf, train_x, self.df['mid_price_indicator'], class_weight=class_weight)
         components_num = None
         if pca:
             components_num = pca.n_components_
@@ -322,6 +344,3 @@ class SvmGdfResults(object):
             logger.info('Scores %s r=%s s=%s - %s', self.stock, self.r, self.s, scores)
             res.append(scores)
         return pd.DataFrame(res)
-
-
-

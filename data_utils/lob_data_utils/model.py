@@ -93,7 +93,8 @@ def test_model(clf, test_data, labels, prefix=None, is_lstm=False):
     }
 
 
-def train_model(clf, train_data, labels, prefix=None, fit_kwargs=None, compile_kwargs=None, is_lstm=False):
+def train_model(clf, train_data, labels, prefix=None, fit_kwargs=None, compile_kwargs=None, is_lstm=False,
+                class_weight=None):
     if not prefix:
         prefix = 'train'
     if is_lstm:
@@ -101,14 +102,14 @@ def train_model(clf, train_data, labels, prefix=None, fit_kwargs=None, compile_k
             raise Exception('You need to set fit and compile kwargs for LSTM')
     if fit_kwargs and is_lstm and compile_kwargs:
         clf.compile(**compile_kwargs)
-        clf.fit(train_data, labels, **fit_kwargs)
+        clf.fit(train_data, labels, **fit_kwargs, class_weight=class_weight)
     else:
-        clf.fit(train_data, labels)
+        clf.fit(train_data, labels, class_weight=class_weight)
     return test_model(clf, train_data, labels, prefix=prefix, is_lstm=is_lstm)
 
 
 def validate_model(clf, train_data, labels, folds=10, print_debug=False, fit_kwargs=None, compile_kwargs=None,
-                   is_lstm=False, plot_name=None):
+                   is_lstm=False, plot_name=None, class_weight=None):
     if is_lstm:
         if not fit_kwargs or not compile_kwargs:
             raise Exception('You need to set fit and compile kwargs for LSTM')
@@ -132,9 +133,9 @@ def validate_model(clf, train_data, labels, folds=10, print_debug=False, fit_kwa
             train_data, labels, i, folds=folds, step_size=step_size, print_debug=print_debug)
         if fit_kwargs and is_lstm and compile_kwargs:
             clf.compile(**compile_kwargs)
-            clf.fit(x_fold_train, y_fold_train, **fit_kwargs)
+            clf.fit(x_fold_train, y_fold_train, **fit_kwargs, class_weight=class_weight)
         else:
-            clf.fit(x_fold_train, y_fold_train)
+            clf.fit(x_fold_train, y_fold_train, class_weight=class_weight)
         if is_lstm:
             prediction = clf.predict_classes(x_fold_test)
         else:
@@ -162,14 +163,14 @@ def validate_model(clf, train_data, labels, folds=10, print_debug=False, fit_kwa
             roc_auc_scores.append(np.nan)
             train_roc_auc_scores.append(metrics.roc_auc_score(y_fold_train, train_prediction))
     if fit_kwargs and is_lstm and plot_name:
-        history = clf.fit(train_data, labels, **fit_kwargs)
+        history = clf.fit(train_data, labels, **fit_kwargs, class_weight=class_weight)
         for k in history.history.keys():
             plt.figure()
             plt.plot(history.history[k])
             plt.savefig(f'{plot_name}_{k}.png')
             plt.close('all')
     train_scores = train_model(clf, train_data, labels, fit_kwargs=fit_kwargs, compile_kwargs=compile_kwargs,
-                               is_lstm=is_lstm)
+                               is_lstm=is_lstm, class_weight=class_weight)
     return {
         'precision': precision_scores,
         'f1': f1_scores,
