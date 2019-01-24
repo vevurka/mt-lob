@@ -68,8 +68,7 @@ def load_prepared_data(stock: str, data_dir=None, length=None,
     # print('Len of data for ', stock, 'is', len(df))
     if length:
         if length > len(df):
-            # print('Not enough data for {} actual len: {},
-            # wanted len: {}'.format(stock, len(df), length))
+            print('Not enough data for {} actual len: {}, wanted len: {}'.format(stock, len(df), length))
             return None, None
         return prepare_dataset(stock, df[0:length], include_test=include_test)
     else:
@@ -170,7 +169,7 @@ def add_queue_imbalance(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def prepare_dataframe(df):
+def prepare_dataframe(df: pd.DataFrame):
     df['bid_price'] = [get_bid_price(df, i) for i in range(len(df))]
     df['ask_price'] = [get_ask_price(df, i) for i in range(len(df))]
     df['mid_price'] = [get_mid_price(df, i) for i in range(len(df))]
@@ -178,15 +177,9 @@ def prepare_dataframe(df):
                           range(len(df))]
     df['sum_buy_bid'] = [sum_buy_active_orders(get_bid_price(df, i), df, i) for i in
                          range(len(df))]
-
-    rows_to_remove = []
-    print('prepare for row removal')
-    # for i in range(len(df) - 1, 0, -1):
-    #     if df['mid_price'].iloc[i] == df['mid_price'].iloc[i - 1]:
-    #         rows_to_remove.append(i)
-
-    # for r in rows_to_remove:  # rows_to_remove is reversed so we can just remove
-    #     df = df.drop(df.index[r])
+    df['mid_price_prev'] = df['mid_price'].shift(-1)
+    df = df[df['mid_price_prev'] != df['mid_price']]
+    df.drop(columns=['mid_price_prev'], inplace=True)
     df = add_mid_price_indicator(df)
     df = add_queue_imbalance(df)
     return df

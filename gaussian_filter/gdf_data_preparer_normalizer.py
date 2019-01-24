@@ -91,15 +91,16 @@ def transform_to_orders(df: pd.DataFrame) -> pd.DataFrame:
 
 def main(stock, all_stocks: list):
     print(stock, datetime.now().isoformat(), all_stocks.index(stock))
-    filename = '{}_normalized.csv'.format(stock)
-    f = os.path.join('data_normalized/', filename)
-    data_file = os.path.join('../data/prepared', stock + '.csv')
+    filename = '{}_normalized_balanced.csv'.format(stock)
+    f = os.path.join('data_normalized_balanced/', filename)
+    data_file = os.path.join('../data/prepared_balanced', stock + '.csv')
     if not os.path.exists(data_file):
+        print(data_file)
         return False
     if not os.path.exists(f):
         print('preparing', filename, datetime.now().isoformat())
 
-        df = pd.read_csv(os.path.join('../data/prepared', stock + '.csv'))
+        df = pd.read_csv(data_file)
         df = transform_to_orders(df)
         print('writing', filename, datetime.now().isoformat())
         df.to_csv(f)
@@ -110,10 +111,11 @@ def main(stock, all_stocks: list):
 if __name__ == "__main__":
     from multiprocessing import Pool
 
-    all_stocks = list(results_15000.keys())
-    all_stocks = list(set(stocks.all_stocks) - set(all_stocks))
-   # stocks = ['9061', '9064', '9265']
-    pool = Pool(processes=4)
+    cluster1 = ['9061', '3459', '4549', '9761', '4851']
+    cluster2 = ['9062', '11869', '12255', '2748', '4320']
+    cluster3 = ['11583', '4799', '9268', '10470', '9058']
+    all_stocks = cluster1 + cluster2 + cluster3
+    pool = Pool(processes=7)
 
     res = [pool.apply_async(main, [s, all_stocks]) for s in all_stocks]
     print([r.get() for r in res])

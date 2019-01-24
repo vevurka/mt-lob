@@ -55,9 +55,9 @@ def transform_to_orders(df: pd.DataFrame, gdfs, K) -> pd.DataFrame:
 
 
 def main(stock):
-    data_dir_in = '../data/data_normalized'
-    data_dir_out = 'data_gdf_not_synced'
-    rs = [(0.1, 0.1), (0.1, 0.5), (0.01, 0.1), (0.01, 0.5)] # (0.1, 0.1),
+    data_dir_in = 'data_normalized_balanced'
+    data_dir_out = 'data_gdf_balanced'
+    rs = [(0.1, 0.1), (0.1, 0.5), (0.01, 0.1), (0.01, 0.5)]
     K = 50
     print(stock, datetime.now().isoformat())
     for r, s in rs:
@@ -75,7 +75,7 @@ def main(stock):
         print('preparing', filename, datetime.now().isoformat())
 
         df = pd.read_csv(
-            os.path.join(data_dir_in, '{}_normalized.csv'.format(stock)))
+            os.path.join(data_dir_in, '{}_normalized_balanced.csv'.format(stock)))
         df = transform_to_orders(df, gdfs, K)
         print('writing', filename, len(df), datetime.now().isoformat())
         df.to_csv(os.path.join(data_dir_out, filename))
@@ -84,16 +84,13 @@ def main(stock):
 
 if __name__ == "__main__":
     from multiprocessing import Pool
-    stocks = list(roc_results.results_15000.keys())
     cluster1 = ['9061', '3459', '4549', '9761', '4851']
     cluster2 = ['9062', '11869', '12255', '2748', '4320']
     cluster3 = ['11583', '4799', '9268', '10470', '9058']
 
-    stocks = set(cluster1 + cluster2 + cluster3).difference(set(stocks))
-   # stocks = list(results_10000.keys())
-   # stocks = ['9061', '9064', '9265']
+    stocks = cluster1 + cluster2 + cluster3
 
-    pool = Pool(processes=4)
+    pool = Pool(processes=16)
 
     res = [pool.apply_async(main, [s]) for s in stocks]
     print([r.get() for r in res])
