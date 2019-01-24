@@ -3,6 +3,7 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
+from sklearn import utils
 from lob_data_utils import lob, model
 from sklearn.decomposition import PCA
 from sklearn.svm import SVC
@@ -147,6 +148,13 @@ class SvmGdfResults(object):
             if sum_of_ratio > threshold:
                 return i
         return 10
+
+    def get_classes_weights(self):
+        y_train = self.df['mid_price_indicator'].values
+        classes = np.unique(y_train)
+        class_weight_list = utils.class_weight.compute_class_weight('balanced', a, y_train)
+        class_weights = {classes[0]: class_weight_list[0], classes[1]: class_weight_list[1]}
+        return class_weights
 
     def train_clf_with_split_pca(self, clf, feature_name, method=None):
         """
