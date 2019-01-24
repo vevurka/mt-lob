@@ -2,6 +2,7 @@ import logging
 
 import numpy as np
 import pandas as pd
+from sklearn import utils
 from lob_data_utils import lob, model
 
 from sklearn.svm import SVC
@@ -35,6 +36,13 @@ class LobClassify(object):
             mean_scores[k] = np.mean(v)
         return mean_scores
 
+    def get_classes_weights(self):
+        y_train = self.df['mid_price_indicator'].values
+        classes = np.unique(y_train)
+        class_weight_list = utils.class_weight.compute_class_weight('balanced', classes, y_train)
+        class_weights = {classes[0]: class_weight_list[0], classes[1]: class_weight_list[1]}
+        return class_weights
+
     def train_clf(self, clf, feature_name='', should_validate=True, method=None, class_weight=None):
         logger.info('Training %s r=%s s=%s: clf=%s',
                     self.stock, clf)
@@ -62,18 +70,17 @@ class LobClassify(object):
         logger.info('Training %s: kernel=%s C=%s gamma=%s coef0=%s',
                     self.stock, kernel, C, gamma, coef0)
         if C and gamma and coef0:
-            clf = SVC(kernel=kernel, C=C, gamma=gamma, coef0=coef0)
+            clf = SVC(kernel=kernel, C=C, gamma=gamma, coef0=coef0, class_weight=class_weight)
         elif C and gamma:
-            clf = SVC(kernel=kernel, C=C, gamma=gamma)
+            clf = SVC(kernel=kernel, C=C, gamma=gamma, class_weight=class_weight)
         else:
-            clf = SVC(kernel=kernel)
+            clf = SVC(kernel=kernel, class_weight=class_weight)
         train_x = self.df[self.feature_columns_dict[feature_name]]
         if should_validate:
-            scores_arrays = model.validate_model(clf, train_x, self.df['mid_price_indicator'],
-                                                 class_weight=class_weight)
+            scores_arrays = model.validate_model(clf, train_x, self.df['mid_price_indicator'])
             scores = self.get_mean_scores(scores_arrays)
         else:
-            scores = model.train_model(clf, train_x, self.df['mid_price_indicator'], class_weight=class_weight)
+            scores = model.train_model(clf, train_x, self.df['mid_price_indicator'])
 
         res = {
             **scores,

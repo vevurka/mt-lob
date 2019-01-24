@@ -104,7 +104,10 @@ def train_model(clf, train_data, labels, prefix=None, fit_kwargs=None, compile_k
         clf.compile(**compile_kwargs)
         clf.fit(train_data, labels, **fit_kwargs, class_weight=class_weight)
     else:
-        clf.fit(train_data, labels, class_weight=class_weight)
+        if class_weight:
+            clf.fit(train_data, labels, class_weight=class_weight)
+        else:
+            clf.fit(train_data, labels)
     return test_model(clf, train_data, labels, prefix=prefix, is_lstm=is_lstm)
 
 
@@ -131,11 +134,16 @@ def validate_model(clf, train_data, labels, folds=10, print_debug=False, fit_kwa
             print('Training fold ', i, len(train_data))
         x_fold_train, y_fold_train, x_fold_test, y_fold_test = _divide_folds(
             train_data, labels, i, folds=folds, step_size=step_size, print_debug=print_debug)
-        if fit_kwargs and is_lstm and compile_kwargs:
-            clf.compile(**compile_kwargs)
-            clf.fit(x_fold_train, y_fold_train, **fit_kwargs, class_weight=class_weight)
-        else:
-            clf.fit(x_fold_train, y_fold_train, class_weight=class_weight)
+        # if fit_kwargs and is_lstm and compile_kwargs:
+        #     clf.compile(**compile_kwargs)
+        #     clf.fit(x_fold_train, y_fold_train, **fit_kwargs, class_weight=class_weight)
+        # else:
+        #     if class_weight:
+        #         clf.fit(x_fold_train, y_fold_train, class_weight=class_weight)
+        #     else:
+        #         clf.fit(x_fold_train, y_fold_train)
+        train_model(clf, x_fold_train, y_fold_train, fit_kwargs=fit_kwargs, compile_kwargs=compile_kwargs,
+                    is_lstm=is_lstm, class_weight=class_weight)
         if is_lstm:
             prediction = clf.predict_classes(x_fold_test)
         else:

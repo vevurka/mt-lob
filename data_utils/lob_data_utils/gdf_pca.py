@@ -152,7 +152,7 @@ class SvmGdfResults(object):
     def get_classes_weights(self):
         y_train = self.df['mid_price_indicator'].values
         classes = np.unique(y_train)
-        class_weight_list = utils.class_weight.compute_class_weight('balanced', a, y_train)
+        class_weight_list = utils.class_weight.compute_class_weight('balanced', classes, y_train)
         class_weights = {classes[0]: class_weight_list[0], classes[1]: class_weight_list[1]}
         return class_weights
 

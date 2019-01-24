@@ -34,8 +34,14 @@ def main(stock, r=0.1, s=0.1):
         stock, r=r, s=s, data_length=data_length, data_dir='../gaussian_filter/data_gdf_not_synced/',
         gdf_filename_pattern='gdf_{}_r{}_s{}_K50')
     results = []
+    feature_name = 'pca_n_gdf_que_prev'
+    n = svm_gdf_res.get_pca(feature_name).n_components
+    hidden_layer_sizes = [n, (n, n), (2*n, n), (2*n, 2*n), (n, 2*n)]
+
+    weights = svm_gdf_res.get_classes_weights()
+
     for alpha in [0.00001, 0.0001, 0.001, 0.01, 0.1]:
-        for hidden_layer_size in [(8, 16), (16, 16), (16, 8), (8, 8), (20, 20), (20, 16, 8), (20, 20, 20)]:
+        for hidden_layer_size in hidden_layer_sizes:
             for learning_rate in [0.00001, 0.0001, 0.001, 0.01, 0.1, 1.0]:
                 activation = 'tanh'
                 solver = 'adam'
@@ -46,7 +52,7 @@ def main(stock, r=0.1, s=0.1):
                     activation=activation,
                     hidden_layer_sizes=hidden_layer_size,
                     random_state=1)
-                scores = svm_gdf_res.train_clf(clf, feature_name='pca_n_gdf_que_prev', method='mlp')
+                scores = svm_gdf_res.train_clf(clf, feature_name=feature_name, method='mlp', class_weight=weights)
                 results.append({**scores, 'alpha': alpha, 'solver': solver,
                                 'hidden_layer_sizes': hidden_layer_size,
                                 'learning_rate': learning_rate})
@@ -63,9 +69,8 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
     pool = Pool(processes=5)
     stocks = stocks_numbers.chosen_stocks
-    stocks = ['9761']
-    # res = [pool.apply_async(main, [s, 0.01, 0.1]) for s in stocks]
-    # print([r.get() for r in res])
+    res = [pool.apply_async(main, [s, 0.01, 0.1]) for s in stocks]
+    print([r.get() for r in res])
     res = [pool.apply_async(main, [s, 0.1, 0.5]) for s in stocks]
     print([r.get() for r in res])
     res = [pool.apply_async(main, [s, 0.1, 0.1]) for s in stocks]
