@@ -6,6 +6,7 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 from lob_data_utils.roc_results import results_15000
+from lob_data_utils import stocks
 
 
 class TestOrdersNormalizers(unittest.TestCase):
@@ -88,14 +89,17 @@ def transform_to_orders(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(orders)
 
 
-def main(stock):
-    print(stock, datetime.now().isoformat())
+def main(stock, all_stocks: list):
+    print(stock, datetime.now().isoformat(), all_stocks.index(stock))
     filename = '{}_normalized.csv'.format(stock)
-    f = os.path.join('data_gdf_whole/', filename)
+    f = os.path.join('data_normalized/', filename)
+    data_file = os.path.join('../data/prepared', stock + '.csv')
+    if not os.path.exists(data_file):
+        return False
     if not os.path.exists(f):
         print('preparing', filename, datetime.now().isoformat())
 
-        df = pd.read_csv(os.path.join('data/', stock + '.csv'))
+        df = pd.read_csv(os.path.join('../data/prepared', stock + '.csv'))
         df = transform_to_orders(df)
         print('writing', filename, datetime.now().isoformat())
         df.to_csv(f)
@@ -106,11 +110,12 @@ def main(stock):
 if __name__ == "__main__":
     from multiprocessing import Pool
 
-    stocks = list(results_15000.keys())
+    all_stocks = list(results_15000.keys())
+    all_stocks = list(set(stocks.all_stocks) - set(all_stocks))
    # stocks = ['9061', '9064', '9265']
-    pool = Pool(processes=6)
+    pool = Pool(processes=4)
 
-    res = [pool.apply_async(main, [s]) for s in stocks]
+    res = [pool.apply_async(main, [s, all_stocks]) for s in all_stocks]
     print([r.get() for r in res])
 
 

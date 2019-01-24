@@ -55,38 +55,41 @@ def transform_to_orders(df: pd.DataFrame, gdfs, K) -> pd.DataFrame:
 
 
 def main(stock):
-    data_dir_in = 'data_gdf'
-    data_dir_out = 'data_gdf_r0.01'
-    rr = [0.01]
-    ss = [0.1]
+    data_dir_in = '../data/data_normalized'
+    data_dir_out = 'data_gdf_not_synced'
+    rs = [(0.1, 0.1), (0.1, 0.5), (0.01, 0.1), (0.01, 0.5)] # (0.1, 0.1),
+    K = 50
     print(stock, datetime.now().isoformat())
-    for r in rr:
-        for s in ss:
-            K = 50
-            filename = 'gdf_{}_len10000_r{}_s{}_K{}.csv'.format(stock, r, s, K)
-            if os.path.exists(os.path.join(data_dir_out, filename)):
+    for r, s in rs:
+        filename = 'gdf_{}_r{}_s{}_K{}.csv'.format(stock, r, s, K)
+        if os.path.exists(os.path.join(data_dir_out, filename)):
 
-                print('already exists ', filename, datetime.now().isoformat())
-                continue
+            print('already exists ', filename, datetime.now().isoformat())
+            continue
 
-            gdfs_r = r * np.ones(K)
-            gdfs_m = 0.1000 * np.hstack([np.arange(- K // 2, 0), np.arange(1, K // 2 + 1)])
-            gdfs_s = s * np.ones(K)
-            gdfs = np.vstack([gdfs_r, gdfs_m, gdfs_s]).T
+        gdfs_r = r * np.ones(K)
+        gdfs_m = 0.1000 * np.hstack([np.arange(- K // 2, 0), np.arange(1, K // 2 + 1)])
+        gdfs_s = s * np.ones(K)
+        gdfs = np.vstack([gdfs_r, gdfs_m, gdfs_s]).T
 
-            print('preparing', filename, datetime.now().isoformat())
+        print('preparing', filename, datetime.now().isoformat())
 
-            df = pd.read_csv(
-                os.path.join(data_dir_in, '{}_len10000_normalized.csv'.format(stock)))
-            df = transform_to_orders(df, gdfs, K)
-            print('writing', filename, len(df), datetime.now().isoformat())
-            df.to_csv(os.path.join(data_dir_out, filename))
+        df = pd.read_csv(
+            os.path.join(data_dir_in, '{}_normalized.csv'.format(stock)))
+        df = transform_to_orders(df, gdfs, K)
+        print('writing', filename, len(df), datetime.now().isoformat())
+        df.to_csv(os.path.join(data_dir_out, filename))
     return True
 
 
 if __name__ == "__main__":
     from multiprocessing import Pool
-    stocks = list(roc_results.results_10000.keys())
+    stocks = list(roc_results.results_15000.keys())
+    cluster1 = ['9061', '3459', '4549', '9761', '4851']
+    cluster2 = ['9062', '11869', '12255', '2748', '4320']
+    cluster3 = ['11583', '4799', '9268', '10470', '9058']
+
+    stocks = set(cluster1 + cluster2 + cluster3).difference(set(stocks))
    # stocks = list(results_10000.keys())
    # stocks = ['9061', '9064', '9265']
 

@@ -59,10 +59,10 @@ def parse_data(filename: str) -> pd.DataFrame:
     return df
 
 
-def load_prepared_data(stock: str, data_dir=None, length=5050,
+def load_prepared_data(stock: str, data_dir=None, length=None,
                        include_test=True) -> Sequence[Optional[pd.DataFrame]]:
     if data_dir is None:
-        data_dir = 'data/prepared/'
+        data_dir = '../data/prepared/'
     df = pd.read_csv(os.path.join(data_dir, stock + '.csv'))
 
     # print('Len of data for ', stock, 'is', len(df))

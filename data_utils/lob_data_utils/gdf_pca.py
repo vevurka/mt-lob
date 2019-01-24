@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class SvmGdfResults(object):
 
     def __init__(self, stock, r=1.0, s=1.0, data_length=10000, gdf_filename_pattern='',
-                 data_dir='../gaussian_filter/data_gdf'):
+                 data_dir='../data/data_gdf'):
         self.stock = stock
         self.r = r
         self.s = s
@@ -276,13 +276,13 @@ class SvmGdfResults(object):
         reg_filename = '{}'.format(self.stock)
         logger.debug('Will read %s and %s', gdf_filename, reg_filename)
         d = lob.load_prepared_data(
-            gdf_filename, data_dir=self.data_dir, cv=False, length=self.data_length)
+            gdf_filename, data_dir=self.data_dir, length=self.data_length)
         if len(d) == 2:
             df, df_test = d
         else:
             return pd.DataFrame(), pd.DataFrame()
         df_reg, df_reg_test = lob.load_prepared_data(
-            reg_filename, data_dir='../gaussian_filter/data', cv=False, length=self.data_length)
+            reg_filename, data_dir='../data/prepared/', length=self.data_length)
         df['datetime'] = df_reg['Unnamed: 0']
         df['bid_price'] = df_reg['bid_price']
         df['ask_price'] = df_reg['ask_price']
