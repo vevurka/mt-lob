@@ -14,13 +14,14 @@ logger = logging.getLogger(__name__)
 class SvmGdfResults(object):
 
     def __init__(self, stock, r=1.0, s=1.0, data_length=10000, gdf_filename_pattern='',
-                 data_dir='../data/data_gdf'):
+                 data_dir='../data/data_gdf', reg_data_dir='../data/prepared'):
         self.stock = stock
         self.r = r
         self.s = s
         self.data_length = data_length
         self.gdf_filename_pattern = gdf_filename_pattern
         self.data_dir = data_dir
+        self.reg_data_dir = reg_data_dir
         self.df, self.df_test = self._read_stock()
 
     all_gdf = ['gdf_{}'.format(i) for i in range(0, 50)]
@@ -52,6 +53,7 @@ class SvmGdfResults(object):
         'pca_gdf8': all_gdf,
         'pca_gdf9': all_gdf,
         'pca_gdf10': all_gdf,
+        'pca_n_gdf': all_gdf,
         'pca_gdf_que1': all_gdf_que,
         'pca_gdf_que2': all_gdf_que,
         'pca_gdf_que3': all_gdf_que,
@@ -129,7 +131,7 @@ class SvmGdfResults(object):
 
     def get_pca(self, feature_name) -> Optional[PCA]:
         train_x = self.df[self.feature_columns_dict[feature_name]].values
-        if feature_name == 'pca_n_gdf_que' or feature_name == 'pca_n_gdf_que_prev':
+        if feature_name == 'pca_n_gdf_que' or feature_name == 'pca_n_gdf_que_prev' or feature_name == 'pca_n_gdf':
             n_components = self.calculate_number_of_components(train_x, threshold=0.99)
         else:
             n_components = self.get_number_of_pca_components(feature_name)
@@ -184,6 +186,31 @@ class SvmGdfResults(object):
         logger.info('Finished training %s %s', self.stock, {**res, **test_scores})
         return {**res, **test_scores}
 
+    def get_train_set(self, feature_name='', n_steps=None):
+        train_x = self.df[self.feature_columns_dict[feature_name]].values
+        train_y = self.df['mid_price_indicator'].values
+
+        pca = self.get_pca(feature_name)
+        if pca:
+            train_x = pca.transform(train_x)
+        if n_steps:
+            train_x, train_y = self.split_sequences(train_x, train_y, n_steps=n_steps)
+        else:
+
+            train_x = np.reshape(train_x, (train_x.shape[0], 1, train_x.shape[1]))
+        return train_x, train_y
+
+    def get_test_set(self, feature_name='', n_steps=None):
+        test_x = self.df_test[self.feature_columns_dict[feature_name]].values
+        test_y = self.df_test['mid_price_indicator'].values
+
+        pca = self.get_pca(feature_name)
+        if pca:
+            test_x = pca.transform(test_x)
+        if n_steps:
+            test_x, test_y = self.split_sequences(test_x, test_y, n_steps=n_steps)
+        return test_x, test_y
+
     def train_lstm(self, clf, feature_name='', should_validate=True, method=None,
                    fit_kwargs=None, compile_kwargs=None, n_steps=None,
                    plot_name=None, class_weight=None):
@@ -210,7 +237,7 @@ class SvmGdfResults(object):
         if should_validate:
             scores_arrays = model.validate_model(
                 clf, train_x, train_y, fit_kwargs=fit_kwargs, compile_kwargs=compile_kwargs,
-                is_lstm=True, plot_name=plot_name, class_weight=class_weight)
+                is_lstm=True, plot_name=plot_name, class_weight=class_weight, print_debug=False)
             scores = self.get_mean_scores(scores_arrays)
         else:
             scores = model.train_model(
@@ -228,9 +255,9 @@ class SvmGdfResults(object):
             'features': feature_name,
             'pca_components': components_num
         }
-        model.train_model(
-            clf, train_x, train_y, compile_kwargs=compile_kwargs, fit_kwargs=fit_kwargs, is_lstm=True,
-            class_weight=class_weight) # to have a clean fitted model
+        # model.train_model(
+        #     clf, train_x, train_y, compile_kwargs=compile_kwargs, fit_kwargs=fit_kwargs, is_lstm=True,
+        #     class_weight=class_weight) # to have a clean fitted model
         test_scores = model.test_model(clf, test_x, test_y, is_lstm=True)
         logger.info('Finished training %s %s', self.stock, {**res, **test_scores})
         return {**res, **test_scores}
@@ -312,7 +339,7 @@ class SvmGdfResults(object):
         else:
             return pd.DataFrame(), pd.DataFrame()
         df_reg, df_reg_test = lob.load_prepared_data(
-            reg_filename, data_dir='../data/prepared/', length=self.data_length)
+            reg_filename, data_dir=self.reg_data_dir, length=self.data_length)
         df['datetime'] = df_reg['Unnamed: 0']
         df['bid_price'] = df_reg['bid_price']
         df['ask_price'] = df_reg['ask_price']

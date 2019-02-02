@@ -1,5 +1,6 @@
 import unittest
 import numpy as np
+from keras.callbacks import EarlyStopping
 from sklearn import metrics
 import matplotlib.pyplot as plt
 
@@ -94,7 +95,7 @@ def test_model(clf, test_data, labels, prefix=None, is_lstm=False):
 
 
 def train_model(clf, train_data, labels, prefix=None, fit_kwargs=None, compile_kwargs=None, is_lstm=False,
-                class_weight=None):
+                class_weight=None, validation_data=None):
     if not prefix:
         prefix = 'train'
     if is_lstm:
@@ -102,7 +103,13 @@ def train_model(clf, train_data, labels, prefix=None, fit_kwargs=None, compile_k
             raise Exception('You need to set fit and compile kwargs for LSTM')
     if fit_kwargs and is_lstm and compile_kwargs:
         clf.compile(**compile_kwargs)
-        clf.fit(train_data, labels, **fit_kwargs, class_weight=class_weight)
+        if validation_data:
+            clf.fit(train_data, labels, **fit_kwargs, class_weight=class_weight,
+                    validation_data=validation_data,
+                    callbacks=[EarlyStopping(monitor='val_loss', min_delta=0, patience=0,
+                                             verbose=0, mode='auto')])
+        else:
+            clf.fit(train_data, labels, **fit_kwargs, class_weight=class_weight)
     else:
         if class_weight:
             clf.fit(train_data, labels, class_weight=class_weight)
@@ -134,16 +141,9 @@ def validate_model(clf, train_data, labels, folds=10, print_debug=False, fit_kwa
             print('Training fold ', i, len(train_data))
         x_fold_train, y_fold_train, x_fold_test, y_fold_test = _divide_folds(
             train_data, labels, i, folds=folds, step_size=step_size, print_debug=print_debug)
-        # if fit_kwargs and is_lstm and compile_kwargs:
-        #     clf.compile(**compile_kwargs)
-        #     clf.fit(x_fold_train, y_fold_train, **fit_kwargs, class_weight=class_weight)
-        # else:
-        #     if class_weight:
-        #         clf.fit(x_fold_train, y_fold_train, class_weight=class_weight)
-        #     else:
-        #         clf.fit(x_fold_train, y_fold_train)
+        validation_data = (x_fold_test, y_fold_test)
         train_model(clf, x_fold_train, y_fold_train, fit_kwargs=fit_kwargs, compile_kwargs=compile_kwargs,
-                    is_lstm=is_lstm, class_weight=class_weight)
+                    is_lstm=is_lstm, class_weight=class_weight, validation_data=(x_fold_test, y_fold_test))
         if is_lstm:
             prediction = clf.predict_classes(x_fold_test)
         else:
@@ -171,10 +171,17 @@ def validate_model(clf, train_data, labels, folds=10, print_debug=False, fit_kwa
             roc_auc_scores.append(np.nan)
             train_roc_auc_scores.append(metrics.roc_auc_score(y_fold_train, train_prediction))
     if fit_kwargs and is_lstm and plot_name:
-        history = clf.fit(train_data, labels, **fit_kwargs, class_weight=class_weight)
+        history = clf.fit(train_data, labels, **fit_kwargs, class_weight=class_weight,
+                          validation_data=validation_data,
+                          callbacks=[EarlyStopping(monitor='val_loss', min_delta=0, patience=0,
+                                                   verbose=0, mode='auto')])
         for k in history.history.keys():
+            if validation_data and 'val' in k:
+                continue
             plt.figure()
-            plt.plot(history.history[k])
+            plt.plot(history.history[k], label=k)
+            plt.plot(history.history['val_' + k], label='val_' + k)
+            plt.legend()
             plt.savefig(f'{plot_name}_{k}.png')
             plt.close('all')
     train_scores = train_model(clf, train_data, labels, fit_kwargs=fit_kwargs, compile_kwargs=compile_kwargs,
