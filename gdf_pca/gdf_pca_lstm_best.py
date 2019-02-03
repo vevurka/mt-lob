@@ -31,7 +31,7 @@ def train_lstm(res):
     weights = gdf_dfs.get_classes_weights()
 
     epochs = 25
-    batch_size = 300
+    batch_size = 30 #int(res['batch'].values[0])
 
     scores = []
     filename = os.path.join('res_lstm_best', f'res_lstm_best_{stock}_len{data_length}_r{r}_s{s}.csv')
@@ -73,7 +73,7 @@ def train_lstm(res):
             score = gdf_dfs.train_lstm(
                 model, feature_name=feature,
                 fit_kwargs={'epochs': epochs, 'batch_size': batch_size, 'verbose': 0, 'shuffle': False},
-                compile_kwargs={'loss': 'binary_crossentropy', 'optimizer': 'adam', 'metrics': [auc_roc]},
+                compile_kwargs={'loss': 'binary_crossentropy', 'optimizer': 'adam', 'metrics': [auc_roc, 'acc']},
                 plot_name=plot_name, class_weight=weights, n_steps=n_steps)
             score = {**score, 'r': r, 's': s, 'unit': unit, 'arch': model.to_json(),
                      'epochs': epochs, 'batch_size': batch_size, 'n_steps': n_steps}

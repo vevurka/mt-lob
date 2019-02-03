@@ -9,8 +9,8 @@ def main(s):
     try:
         df, _ = lob.load_data(str(s), data_dir='data/INDEX/', include_test=False)
         # print(df.head())
-        df.to_csv('data/prepared/' + str(s) + '.csv')
-    except Exception as e:
+        df.to_csv('data/prepared_removed/' + str(s) + '.csv')
+    except RuntimeError as e:
         print(e)
         errors.append({'stock': s, 'error': e})
     print(errors)
