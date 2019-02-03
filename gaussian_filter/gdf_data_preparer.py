@@ -55,9 +55,10 @@ def transform_to_orders(df: pd.DataFrame, gdfs, K) -> pd.DataFrame:
 
 
 def main(stock):
-    data_dir_in = 'data_normalized_balanced'
-    data_dir_out = 'data_gdf_balanced'
-    rs = [(0.1, 0.1), (0.1, 0.5), (0.01, 0.1), (0.01, 0.5)]
+    data_dir_in = '../data/data_normalized'
+    data_dir_out = '../data/data_gdf'
+    #rs = [(0.1, 0.1), (0.1, 0.5), (0.01, 0.1), (0.01, 0.5)]
+    rs = [(0.25, 0.25)]
     K = 50
     print(stock, datetime.now().isoformat())
     for r, s in rs:
@@ -75,7 +76,7 @@ def main(stock):
         print('preparing', filename, datetime.now().isoformat())
 
         df = pd.read_csv(
-            os.path.join(data_dir_in, '{}_normalized_balanced.csv'.format(stock)))
+            os.path.join(data_dir_in, '{}_normalized.csv'.format(stock)))
         df = transform_to_orders(df, gdfs, K)
         print('writing', filename, len(df), datetime.now().isoformat())
         df.to_csv(os.path.join(data_dir_out, filename))
