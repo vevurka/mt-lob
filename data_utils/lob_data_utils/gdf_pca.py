@@ -211,6 +211,48 @@ class SvmGdfResults(object):
             test_x, test_y = self.split_sequences(test_x, test_y, n_steps=n_steps)
         return test_x, test_y
 
+    def train_mlp(self, clf, feature_name='', should_validate=True, method=None,
+                  fit_kwargs=None, compile_kwargs=None, plot_name=None, class_weight=None):
+        logger.info('Training %s r=%s s=%s: clf=%s', self.stock, self.r, self.s, clf)
+
+        train_x = self.df[self.feature_columns_dict[feature_name]].values
+        test_x = self.df_test[self.feature_columns_dict[feature_name]].values
+        train_y = self.df['mid_price_indicator'].values
+        test_y = self.df_test['mid_price_indicator'].values
+
+        pca = self.get_pca(feature_name)
+        if pca:
+            train_x = pca.transform(train_x)
+            test_x = pca.transform(test_x)
+
+        if should_validate:
+            scores_arrays = model.validate_model(
+                clf, train_x, train_y, fit_kwargs=fit_kwargs, compile_kwargs=compile_kwargs,
+                is_lstm=True, plot_name=plot_name, class_weight=class_weight, print_debug=False)
+            scores = self.get_mean_scores(scores_arrays)
+        else:
+            scores = model.train_model(
+                clf, train_x, train_y, compile_kwargs=compile_kwargs, fit_kwargs=fit_kwargs, is_lstm=True,
+                class_weight=class_weight)
+        if not method:
+            method = 'mlp'
+        components_num = None
+        if pca:
+            components_num = pca.n_components_
+        res = {
+            **scores,
+            'stock': self.stock,
+            'kernel': method,
+            'features': feature_name,
+            'pca_components': components_num
+        }
+        # model.train_model(
+        #     clf, train_x, train_y, compile_kwargs=compile_kwargs, fit_kwargs=fit_kwargs, is_lstm=True,
+        #     class_weight=class_weight) # to have a clean fitted model
+        test_scores = model.test_model(clf, test_x, test_y, is_lstm=True)
+        logger.info('Finished training %s %s', self.stock, {**res, **test_scores})
+        return {**res, **test_scores}
+
     def train_lstm(self, clf, feature_name='', should_validate=True, method=None,
                    fit_kwargs=None, compile_kwargs=None, n_steps=None,
                    plot_name=None, class_weight=None):
