@@ -226,13 +226,14 @@ class SvmGdfResults(object):
             test_x = pca.transform(test_x)
 
         if should_validate:
-            scores_arrays = model.validate_model(
+            scores_arrays = model.validate_model_lstm(
                 clf, train_x, train_y, fit_kwargs=fit_kwargs, compile_kwargs=compile_kwargs,
-                is_lstm=True, plot_name=plot_name, class_weight=class_weight, print_debug=False)
+                plot_name=plot_name, class_weight=class_weight, print_debug=False)
             scores = self.get_mean_scores(scores_arrays)
         else:
+            m = clf()
             scores = model.train_model(
-                clf, train_x, train_y, compile_kwargs=compile_kwargs, fit_kwargs=fit_kwargs, is_lstm=True,
+                m, train_x, train_y, compile_kwargs=compile_kwargs, fit_kwargs=fit_kwargs, is_lstm=True,
                 class_weight=class_weight)
         if not method:
             method = 'mlp'
@@ -246,12 +247,13 @@ class SvmGdfResults(object):
             'features': feature_name,
             'pca_components': components_num
         }
-        # model.train_model(
-        #     clf, train_x, train_y, compile_kwargs=compile_kwargs, fit_kwargs=fit_kwargs, is_lstm=True,
-        #     class_weight=class_weight) # to have a clean fitted model
-        test_scores = model.test_model(clf, test_x, test_y, is_lstm=True)
+        m = clf()
+        model.train_model(
+            m, train_x, train_y, compile_kwargs=compile_kwargs, fit_kwargs=fit_kwargs, is_lstm=True,
+            class_weight=class_weight)  # to have a clean fitted model
+        test_scores = model.test_model(m, test_x, test_y, is_lstm=True)
         logger.info('Finished training %s %s', self.stock, {**res, **test_scores})
-        return {**res, **test_scores}
+        return {**res, **test_scores, 'arch': m.to_json()}
 
     def train_lstm(self, clf, feature_name='', should_validate=True, method=None,
                    fit_kwargs=None, compile_kwargs=None, n_steps=None,
@@ -277,13 +279,14 @@ class SvmGdfResults(object):
             test_x = np.reshape(test_x, (test_x.shape[0], 1, test_x.shape[1]))
 
         if should_validate:
-            scores_arrays = model.validate_model(
+            scores_arrays, m = model.validate_model_lstm(
                 clf, train_x, train_y, fit_kwargs=fit_kwargs, compile_kwargs=compile_kwargs,
-                is_lstm=True, plot_name=plot_name, class_weight=class_weight, print_debug=False)
+                plot_name=plot_name, class_weight=class_weight, print_debug=False)
             scores = self.get_mean_scores(scores_arrays)
         else:
+            m = clf()
             scores = model.train_model(
-                clf, train_x, train_y, compile_kwargs=compile_kwargs, fit_kwargs=fit_kwargs, is_lstm=True,
+                m, train_x, train_y, compile_kwargs=compile_kwargs, fit_kwargs=fit_kwargs, is_lstm=True,
                 class_weight=class_weight)
         if not method:
             method = 'lstm'
@@ -297,12 +300,13 @@ class SvmGdfResults(object):
             'features': feature_name,
             'pca_components': components_num
         }
-        # model.train_model(
-        #     clf, train_x, train_y, compile_kwargs=compile_kwargs, fit_kwargs=fit_kwargs, is_lstm=True,
-        #     class_weight=class_weight) # to have a clean fitted model
-        test_scores = model.test_model(clf, test_x, test_y, is_lstm=True)
+        m = clf()
+        model.train_model(
+            m, train_x, train_y, compile_kwargs=compile_kwargs, fit_kwargs=fit_kwargs, is_lstm=True,
+            class_weight=class_weight)
+        test_scores = model.test_model(m, test_x, test_y, is_lstm=True)
         logger.info('Finished training %s %s', self.stock, {**res, **test_scores})
-        return {**res, **test_scores}
+        return {**res, **test_scores, 'arch': m.to_json()}
 
     def train_clf(self, clf, feature_name='', should_validate=True, method=None, class_weight=None):
         logger.info('Training %s r=%s s=%s: clf=%s',
