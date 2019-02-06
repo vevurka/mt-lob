@@ -51,8 +51,8 @@ def matthews_correlation(y_true, y_pred):
 
 def get_model1():  # 10470
     model = Sequential()
-    model.add(Dense(16, kernel_regularizer=regularizers.l2(0.01)))
-    model.add(Dense(8, kernel_regularizer=regularizers.l2(0.01)))
+    model.add(Dense(16, activation='relu', kernel_regularizer=regularizers.l2(0.01)))
+    model.add(Dense(8, activation='relu', kernel_regularizer=regularizers.l2(0.01)))
     model.add(Dense(1, activation='sigmoid'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=[auc_roc])
     return model
@@ -60,8 +60,8 @@ def get_model1():  # 10470
 
 def get_model2():
     model = Sequential()
-    model.add(Dense(4, kernel_regularizer=regularizers.l2(0.01)))
-    model.add(Dense(2, kernel_regularizer=regularizers.l2(0.01)))
+    model.add(Dense(4, activation='relu', kernel_regularizer=regularizers.l2(0.01)))
+    model.add(Dense(2, activation='relu', kernel_regularizer=regularizers.l2(0.01)))
     model.add(Dense(1, activation='sigmoid'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=[auc_roc])
     return model
@@ -69,9 +69,9 @@ def get_model2():
 
 def get_model3():
     model = Sequential()
-    model.add(Dense(8, kernel_regularizer=regularizers.l2(0.01)))
-    model.add(Dense(4, kernel_regularizer=regularizers.l2(0.01)))
-    model.add(Dense(2, kernel_regularizer=regularizers.l2(0.01)))
+    model.add(Dense(8, activation='relu', kernel_regularizer=regularizers.l2(0.01)))
+    model.add(Dense(4, activation='relu', kernel_regularizer=regularizers.l2(0.01)))
+    model.add(Dense(2, activation='relu', kernel_regularizer=regularizers.l2(0.01)))
     model.add(Dense(1, activation='sigmoid'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=[auc_roc])
     return model
@@ -79,9 +79,9 @@ def get_model3():
 
 def get_model4():
     model = Sequential()
-    model.add(Dense(16, kernel_regularizer=regularizers.l2(0.01)))
-    model.add(Dense(8, kernel_regularizer=regularizers.l2(0.01)))
-    model.add(Dense(4, kernel_regularizer=regularizers.l2(0.01)))
+    model.add(Dense(16, activation='relu', kernel_regularizer=regularizers.l2(0.01)))
+    model.add(Dense(8, activation='relu', kernel_regularizer=regularizers.l2(0.01)))
+    model.add(Dense(4, activation='relu', kernel_regularizer=regularizers.l2(0.01)))
     model.add(Dense(1, activation='sigmoid'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=[auc_roc])
     return model
@@ -89,7 +89,7 @@ def get_model4():
 
 def get_model5():
     model = Sequential()
-    model.add(Dense(8, kernel_regularizer=regularizers.l2(0.01)))
+    model.add(Dense(8, activation='relu', kernel_regularizer=regularizers.l2(0.01)))
     model.add(Dense(1, activation='sigmoid'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=[auc_roc])
     return model
