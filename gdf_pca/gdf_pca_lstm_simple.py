@@ -1,18 +1,18 @@
 import functools
 import logging
 import os
+import sys
 
+import numpy as np
 import pandas as pd
-import sklearn
 import tensorflow as tf
 from keras import backend as K
 from keras.layers import Dense
 from keras.layers import LSTM
 from keras.models import Sequential
-from keras import regularizers
-from lob_data_utils import gdf_pca, roc_results, stocks_numbers
+from lob_data_utils import gdf_pca, stocks_numbers
 from numpy.random import seed
-import logging
+
 seed(1)
 
 logger = logging.getLogger(__name__)
@@ -60,17 +60,22 @@ def get_model_func(unit, input_shape=None):
         model.add(Dense(1, input_shape=(unit, 1), activation='sigmoid'))
         model.compile(loss='binary_crossentropy', optimizer='adam', metrics=[auc_roc, matthews_correlation, 'acc'])
         return model
+
     return get_model
 
 
 def train_lstm(stock, r, s, data_length):
+    r = float(r)
+    s = float(s)
+    data_length = int(data_length)
+    print('running', stock, r, s, data_length)
     gdf_filename_pattern = 'gdf_{}_r{}_s{}_K50'
     gdf_dfs = gdf_pca.SvmGdfResults(
         str(stock), r=r, s=s, data_length=data_length, gdf_filename_pattern=gdf_filename_pattern)
 
     units = [4, 8, 16, 32]
     weights = gdf_dfs.get_classes_weights()
-    features = ['pca_n_gdf_que'] #, 'pca_n_gdf_que_prev']
+    features = ['pca_n_gdf_que']  # , 'pca_n_gdf_que_prev']
     epochs = 50
     batch_size = 512
     n_steps = 16
@@ -84,12 +89,15 @@ def train_lstm(stock, r, s, data_length):
     df_partial = pd.DataFrame()
     if os.path.exists(partial_filename):
         df_partial = pd.read_csv(partial_filename)
+        df_partial.drop(columns=[c for c in df_partial.columns if 'Unnamed' in c])
 
     for unit in units:
         for feature in features:
-            if os.path.exists(filename):
-                print(f'Exists {filename}.')
-                return None
+            if np.any(df_partial):
+                row = df_partial[df_partial['unit'] == unit][df_partial['features'] == feature]
+                if np.any(row):
+                    print(f'Already calculated {stock} {unit} {feature}')
+                    continue
             pca = gdf_dfs.get_pca(feature)
             get_model = get_model_func(unit, input_shape=(n_steps, pca.n_components_))
             plot_name = f'plot_lstm/{stock}_one_layer_u{unit}_pca_n_r{r}_s{s}'
@@ -98,7 +106,7 @@ def train_lstm(stock, r, s, data_length):
                 fit_kwargs={'epochs': epochs, 'batch_size': batch_size, 'verbose': 0, 'shuffle': False},
                 compile_kwargs={'loss': 'binary_crossentropy', 'optimizer': 'adam', 'metrics': [auc_roc]},
                 plot_name=plot_name, class_weight=weights, n_steps=n_steps)
-            score = {**score, 'r': r, 's': s,  'unit': f'({unit}: relu, 1)',
+            score = {**score, 'r': r, 's': s, 'unit': f'({unit}: relu, 1)',
                      'epochs': epochs, 'batch_size': batch_size, 'n_steps': n_steps}
             df_partial = df_partial.append(pd.DataFrame([score]), ignore_index=True)
             df_partial.to_csv(partial_filename)
@@ -106,24 +114,10 @@ def train_lstm(stock, r, s, data_length):
     return True
 
 
-def main():
-    from multiprocessing import Pool
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
-    data_length = 24000
-    stocks = stocks_numbers.chosen_stocks
-    pool = Pool(processes=5)
-    # stocks = ['11869', '4799', '9268']
-    res = [pool.apply_async(train_lstm, [s, 0.25, 0.25, data_length]) for s in stocks]
-    print([r.get() for r in res])
-    res = [pool.apply_async(train_lstm, [s, 0.1, 0.1, data_length]) for s in stocks]
-    print([r.get() for r in res])
-    res = [pool.apply_async(train_lstm, [s, 0.01, 0.1, data_length]) for s in stocks]
-    print([r.get() for r in res])
-    res = [pool.apply_async(train_lstm, [s, 0.1, 0.5, data_length]) for s in stocks]
-    print([r.get() for r in res])
-    res = [pool.apply_async(train_lstm, [s, 0.01, 0.5, data_length]) for s in stocks]
-    print([r.get() for r in res])
-
-
 if __name__ == '__main__':
-    main()
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
+    stock = sys.argv[1]
+    r = sys.argv[2]
+    s = sys.argv[3]
+    data_length = sys.argv[4]
+    train_lstm(stock, r, s, data_length)
