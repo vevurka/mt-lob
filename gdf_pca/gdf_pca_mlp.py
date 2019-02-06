@@ -38,7 +38,7 @@ def main(stock, r=0.1, s=0.1):
         stock, r=r, s=s, data_length=data_length, gdf_filename_pattern='gdf_{}_r{}_s{}_K50')
     feature_name = 'pca_n_gdf_que'
     n = svm_gdf_res.get_pca(feature_name).n_components
-    hidden_layer_sizes = [(n,), (n, n), (2 * n, n), (2 * n, 2 * n), (n, 2 * n), (n * n * n)]
+    hidden_layer_sizes = [(n,), (n, n), (2 * n, n), (2 * n, 2 * n), (n, 2 * n), (n, n, n)]
 
     weights = svm_gdf_res.get_classes_weights()
     epochs = 10
@@ -53,7 +53,7 @@ def main(stock, r=0.1, s=0.1):
         print(f'Reading partial file {filename_partial}')
         df_partial = pd.read_csv(filename_partial)
     for hidden_layer_size in hidden_layer_sizes:
-        for learning_rate in [0.00001, 0.0001, 0.001, 0.01, 0.1, 1.0]:
+        for learning_rate in [0.001]: #[0.00001, 0.0001, 0.001, 0.01, 0.1, 1.0]:
             if np.any(df_partial):
 
                 print(filename_partial)
@@ -65,6 +65,7 @@ def main(stock, r=0.1, s=0.1):
                     if np.any(row):
                         print(f'Read result for hidden layer {hidden_layer_size} lr {learning_rate} in {filename_partial}')
                         continue
+            print(f'Training {stock} {r} {s} {hidden_layer_size} {learning_rate}')
             solver = optimizers.Adam(lr=learning_rate)
             model = Sequential()
             if isinstance(hidden_layer_size, int):

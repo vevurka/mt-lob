@@ -1,17 +1,12 @@
-import functools
-import json
 import logging
 import os
 
+import numpy as np
 import pandas as pd
-import sklearn
+from lob_data_utils import gdf_pca, stocks_numbers
 from sklearn import utils
 from sklearn.linear_model import LogisticRegression
 from statsmodels.stats.contingency_tables import mcnemar
-import numpy as np
-
-from lob_data_utils import gdf_pca, stocks_numbers, lob
-from numpy.random import seed
 
 
 def get_classes_weights(df):
@@ -34,10 +29,20 @@ def perform_mcnemar(res):
     df = gdf_dfs.df
     df_test = gdf_dfs.df_test
     df_lstm = pd.read_csv(f'predictions/pred_lstm_best_{stock}_len{data_length}_r{r}_s{s}.csv')
+
     reg = LogisticRegression(class_weight=get_classes_weights(df))
     reg.fit(df[['queue_imbalance']], df['mid_price_indicator'])
     log_pred = reg.predict(df_test[['queue_imbalance']])
-    table = pd.crosstab(df_lstm['pred'].values, log_pred[(len(log_pred) - len(df_lstm)):])
+
+    df_all = pd.DataFrame()
+    df_all['pred_log'] = log_pred[(len(log_pred) - len(df_lstm)):]
+    df_all['pred_lstm'] = df_lstm['pred'].values
+    df_all['actual'] = df_test['mid_price_indicator'].values[(len(log_pred) - len(df_lstm)):]
+
+    df_all['correct_lstm'] = (df_all['pred_lstm'] == df_all['actual']).astype(np.int64)
+    df_all['correct_log'] = (df_all['pred_log'] == df_all['actual']).astype(np.int64)
+
+    table = pd.crosstab(df_all['correct_lstm'], df_all['correct_log'])
     mcnemar_res = mcnemar(table, exact=False, correction=True)
 
     df_mcnemar = pd.DataFrame()
