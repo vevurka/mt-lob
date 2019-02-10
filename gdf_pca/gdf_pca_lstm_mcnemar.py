@@ -69,7 +69,7 @@ def get_best_results(data_dir):
 def main():
     from multiprocessing import Pool
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
-    data_dir = 'res_lstm_weird/'
+    data_dir = 'res_lstm/'
     stocks = stocks_numbers.chosen_stocks
     df_best = get_best_results(data_dir)
     pool = Pool(processes=8)

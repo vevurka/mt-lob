@@ -44,7 +44,7 @@ def train_lstm(stock, r, s, data_length):
     weights = gdf_dfs.get_classes_weights()
 
     epochs = 50
-    batch_size = 10
+    batch_size = 512
 
     for unit in units:
         scores = []
