@@ -257,7 +257,7 @@ class SvmGdfResults(object):
 
     def train_lstm(self, clf, feature_name='', should_validate=True, method=None,
                    fit_kwargs=None, compile_kwargs=None, n_steps=None,
-                   plot_name=None, class_weight=None):
+                   plot_name=None, class_weight=None, should_return_model=False):
         logger.info('Training %s r=%s s=%s: clf=%s', self.stock, self.r, self.s, clf)
 
         train_x = self.df[self.feature_columns_dict[feature_name]].values
@@ -300,13 +300,16 @@ class SvmGdfResults(object):
             'features': feature_name,
             'pca_components': components_num
         }
-        m = clf()
-        model.train_model(
-            m, train_x, train_y, compile_kwargs=compile_kwargs, fit_kwargs=fit_kwargs, is_lstm=True,
-            class_weight=class_weight)
+        # m = clf()
+        # model.train_model(
+        #     m, train_x, train_y, compile_kwargs=compile_kwargs, fit_kwargs=fit_kwargs, is_lstm=True,
+        #     class_weight=class_weight)
         test_scores = model.test_model(m, test_x, test_y, is_lstm=True)
         logger.info('Finished training %s %s', self.stock, {**res, **test_scores})
-        return {**res, **test_scores, 'arch': m.to_json()}
+        if should_return_model:
+            return {**res, **test_scores, 'arch': m.to_json()}, m
+        else:
+            return {**res, **test_scores, 'arch': m.to_json()}
 
     def train_clf(self, clf, feature_name='', should_validate=True, method=None, class_weight=None):
         logger.info('Training %s r=%s s=%s: clf=%s',
