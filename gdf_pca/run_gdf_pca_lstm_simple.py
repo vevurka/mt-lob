@@ -15,8 +15,9 @@ if __name__ == '__main__':
     from multiprocessing import Pool
 
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
-    pool = Pool(processes=5)
+    pool = Pool(processes=3)
     stocks = stocks_numbers.chosen_stocks
+    stocks = [str(c) for c in [12255, 4799, 11869,  4549,  9268,  3459,  9061,  9062]]
     res = [pool.apply_async(main, [s, 0.01, 0.1]) for s in stocks]
     print([r.get() for r in res])
     res = [pool.apply_async(main, [s, 0.1, 0.5]) for s in stocks]

@@ -29,8 +29,35 @@ def as_keras_metric(method):
     return wrapper
 
 
+def matthews_correlation(y_true, y_pred):
+    from keras import backend as K
+    y_pred_pos = K.round(K.clip(y_pred, 0, 1))
+    y_pred_neg = 1 - y_pred_pos
+
+    y_pos = K.round(K.clip(y_true, 0, 1))
+    y_neg = 1 - y_pos
+
+    tp = K.sum(y_pos * y_pred_pos)
+    tn = K.sum(y_neg * y_pred_neg)
+
+    fp = K.sum(y_neg * y_pred_pos)
+    fn = K.sum(y_pos * y_pred_neg)
+
+    numerator = (tp * tn - fp * fn)
+    denominator = K.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
+
+    return numerator / (denominator + K.epsilon())
+
 auc_roc = as_keras_metric(tf.metrics.auc)
 seed(1)
+
+
+def get_model(arch):
+    def _get_model():
+        mod = model_from_json(arch)
+        mod.compile(loss='binary_crossentropy', optimizer='adam', metrics=[matthews_correlation, auc_roc])
+        return mod
+    return _get_model
 
 
 def train_lstm(res):
@@ -47,27 +74,23 @@ def train_lstm(res):
         stock, r=r, s=s, data_length=data_length, gdf_filename_pattern=gdf_filename_pattern)
     weights = gdf_dfs.get_classes_weights()
 
-    epochs = 25
-    batch_size = 300
+    epochs = 50
+    batch_size = 512
 
     filename = os.path.join('predictions', f'pred_lstm_best_{stock}_len{data_length}_r{r}_s{s}.csv')
     if os.path.exists(filename):
         print(f'Exists {filename}.')
         return None
 
-    mod = model_from_json(arch)
-    mod.compile(loss='binary_crossentropy', optimizer='adam', metrics=[auc_roc])
-    plot_model(mod, to_file=f'plot_lstm_best/{stock}_model_best_r{r}_s{s}.png')
-    plot_name = f'plot_lstm_best/{stock}_pred_r{r}_s{s}'
-
-    gdf_dfs.train_lstm(
-        mod, feature_name=feature,
+    get_model_func = get_model(arch)
+    s, m = gdf_dfs.train_lstm(
+        get_model_func, feature_name=feature, should_return_model=True,
         fit_kwargs={'epochs': epochs, 'batch_size': batch_size, 'verbose': 0, 'shuffle': False},
         should_validate=False,
-        compile_kwargs={'loss': 'binary_crossentropy', 'optimizer': 'adam', 'metrics': [auc_roc]},
-        plot_name=plot_name, class_weight=weights, n_steps=n_steps)
+        compile_kwargs={'loss': 'binary_crossentropy', 'optimizer': 'adam', 'metrics': [matthews_correlation, auc_roc]},
+        class_weight=weights, n_steps=n_steps)
     test_x, test_y = gdf_dfs.get_test_set(feature_name=feature, n_steps=n_steps)
-    pred = mod.predict_classes(test_x)
+    pred = m.predict_classes(test_x)
     df_scores = pd.DataFrame()
     df_scores['pred'] = pred.ravel()
     df_scores['actual'] = test_y
@@ -87,14 +110,10 @@ def get_best_results(data_dir):
 def main():
     from multiprocessing import Pool
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
-    data_dir = 'res_lstm_weird/'
+    data_dir = 'res_lstm/'
     stocks = stocks_numbers.chosen_stocks
     df_best = get_best_results(data_dir)
-    stocks2 = ['11869', '4799', '9268']# , '9761', '9268', '9062']
-    train_lstm(df_best[df_best['stock'] == int('11869')])
     pool = Pool(processes=8)
-   # res = [pool.apply_async(train_lstm, [df_best[df_best['stock'] == int(s)]]) for s in stocks2]
-   # print([r.get() for r in res])
     res = [pool.apply_async(train_lstm, [df_best[df_best['stock'] == int(s)]]) for s in stocks]
     print([r.get() for r in res])
 
