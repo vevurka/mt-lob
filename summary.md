@@ -34,7 +34,7 @@ classification.
 
 
 
-### TODO
+## TODO
 
 * what is the title of this master thesis
 * could we use better architecture of LSTM?
@@ -44,9 +44,9 @@ classification.
 
 
 
-#### Removed
+## Removed
 
-## Queue Imbalance + Previous Queue Imbalance
+### Queue Imbalance + Previous Queue Imbalance
 
 * logistic regression - no big improvement
 * SVM - no big improvement
