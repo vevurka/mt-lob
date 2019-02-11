@@ -1,28 +1,26 @@
 # Summary
 
 Scores: MCC, ROC area. Recording F1, recall, precision, accuracy as well.
-Validation method: 10-fold forward anchored cross validation.
+Validation method: 5-fold forward cross validation.
+
+To compare we compare scores directly and apply McNemar test.
+
+Methods described in thesis are **bolded**.
+
 
 ## Queue Imbalance
 
-* logistic regression - described in thesis
-* SVM - described in thesis
+* **logistic regression** - described in thesis
+* **SVM** - described in thesis
 * ensemble methods - briefly tried, will not show in thesis, since no good results
 
-## Queue Imbalance + Previous Queue Imbalance
-
-* logistic regression - no big improvement
-* SVM - no big improvement
-
-It is better for visualization how the algorithms find decision boundary. No improvement because the features
-are correlated with each other.
 
 ## GDF
 
 * logistic regression - tried very briefly, will not show in thesis, or should I?
 * SVM - the results could be described in the thesis, but there is nothing interesting about them.
-* MLP - the results are already described in the thesis.
-* (LSTM?) - seems worth trying!
+* MLP - the results could be described
+* **LSTM** - the results are currently described in the thesis
 
 ## PCA on GDF
 
@@ -32,12 +30,26 @@ classification.
 * logistic regression - should I try? I think it is a waste of time
 * SVM - tried briefly, should I show it?
 * MLP - slightly better results
-* (LSTM?) - from 3 stocks I tried big improvement! (even 4% of ROC area score)
+* **LSTM** - described
 
-### Fixes
 
-* look at PCA explained variance, do I have to pick number of components = 10
-* look at r and s parameters for GDF - design an algorithm for choosing them
-* there is a hole in gdfs (lower values for middle gdfs), should I fix it?  
-* think about visualizing results (maybe there is some similar paper which has a perfect result section?)
 
+### TODO
+
+* what is the title of this master thesis
+* could we use better architecture of LSTM?
+* should we show MLP and not bolded approaches at all? or briefly explain them?
+* how the results description could be improved
+* how much details in description of SVM and LSTM in knowledge base?
+
+
+
+#### Removed
+
+## Queue Imbalance + Previous Queue Imbalance
+
+* logistic regression - no big improvement
+* SVM - no big improvement
+
+It is better for visualization how the algorithms find decision boundary. No improvement because the features
+are correlated with each other.
