@@ -20,7 +20,7 @@ Methods described in thesis are **bolded**.
 * logistic regression - tried very briefly, will not show in thesis, or should I?
 * SVM - the results could be described in the thesis, but there is nothing interesting about them.
 * MLP - the results could be described
-* **LSTM** - the results are currently described in the thesis
+* LSTM - the results are currently described in the thesis
 
 ## PCA on GDF
 
