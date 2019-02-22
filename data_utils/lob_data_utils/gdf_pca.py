@@ -131,7 +131,7 @@ class SvmGdfResults(object):
 
     def get_pca(self, feature_name) -> Optional[PCA]:
         train_x = self.df[self.feature_columns_dict[feature_name]].values
-        if feature_name == 'pca_n_gdf_que' or feature_name == 'pca_n_gdf_que_prev' or feature_name == 'pca_n_gdf':
+        if feature_name in ['pca_n_gdf_que', 'pca_n_gdf_que_prev', 'pca_n_gdf']:
             n_components = self.calculate_number_of_components(train_x, threshold=0.99)
         else:
             n_components = self.get_number_of_pca_components(feature_name)

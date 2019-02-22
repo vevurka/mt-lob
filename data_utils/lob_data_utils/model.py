@@ -260,16 +260,16 @@ def validate_model_lstm(get_model, train_data, labels, folds=10, print_debug=Fal
     if plot_name:
         m = get_model()
         history = m.fit(train_data, labels, **fit_kwargs, class_weight=class_weight,
-                        validation_data=validation_data,
-                        callbacks=
-                        [EarlyStopping(monitor='val_loss', min_delta=0, patience=5, verbose=1, mode='auto')])
+                        validation_data=validation_data)
         for k in history.history.keys():
             if validation_data and 'val' in k:
                 continue
             plt.figure()
-            plt.plot(history.history[k], label=k)
-            plt.plot(history.history['val_' + k], label='val_' + k)
+            plt.title(k)
+            plt.plot(history.history[k], label='Train ' + k)
+            plt.plot(history.history['val_' + k], label='Validation ' + k)
             plt.legend()
+            plt.tight_layout()
             plt.savefig(f'{plot_name}_{k}.png')
             plt.close('all')
 
