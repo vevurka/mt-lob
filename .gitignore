@@ -108,3 +108,9 @@ ENV/
 # mypy
 .mypy_cache/
 /queue_imbalance/.ipynb_checkpoints/
+
+# pics
+gdf_pca/*.png
+overview/*.png
+overview_val10/*.png
+overview/playground/*.png
