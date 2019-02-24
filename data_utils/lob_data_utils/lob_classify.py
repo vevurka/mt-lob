@@ -11,7 +11,7 @@ from sklearn.svm import SVC
 logger = logging.getLogger(__name__)
 
 
-class LobClassify(object):
+class LobClassifySimple(object):
 
     def __init__(self, stock: str, data_length: int=10000, data_dir: str='../data/prepared'):
         self.stock = stock
@@ -44,15 +44,15 @@ class LobClassify(object):
         return class_weights
 
     def train_clf(self, clf, feature_name='', should_validate=True, method=None, class_weight=None):
-        logger.info('Training %s r=%s s=%s: clf=%s',
-                    self.stock, clf)
+        logger.info('Training %s: clf=%s', self.stock, clf)
         train_x = self.df[self.feature_columns_dict[feature_name]]
         if should_validate:
             scores_arrays = model.validate_model(
                 clf, train_x, self.df['mid_price_indicator'], class_weight=class_weight)
             scores = self.get_mean_scores(scores_arrays)
         else:
-            scores = model.train_model(clf, train_x, self.df['mid_price_indicator'], class_weight=class_weight)
+            scores = model.train_model(clf, train_x, self.df['mid_price_indicator'],
+                                       class_weight=class_weight)
         if not method:
             method = 'logistic'
         res = {
@@ -65,8 +65,8 @@ class LobClassify(object):
         logger.info('Finished training %s %s', self.stock, {**res, **test_scores})
         return {**res, **test_scores}
 
-    def train_svm(self, C=np.nan, gamma=np.nan, feature_name='', kernel='rbf', coef0=np.nan, should_validate=True,
-                  class_weight=None):
+    def train_svm(self, C=np.nan, gamma=np.nan, feature_name='', kernel='rbf', coef0=np.nan,
+                  should_validate=True, class_weight=None):
         logger.info('Training %s: kernel=%s C=%s gamma=%s coef0=%s',
                     self.stock, kernel, C, gamma, coef0)
         if C and gamma and coef0:
