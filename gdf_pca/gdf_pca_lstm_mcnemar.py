@@ -28,7 +28,7 @@ def perform_mcnemar(res):
 
     df = gdf_dfs.df
     df_test = gdf_dfs.df_test
-    df_lstm = pd.read_csv(f'predictions/pred_lstm_best_{stock}_len{data_length}_r{r}_s{s}.csv')
+    df_lstm = pd.read_csv(f'res_lstm_predictions/pred_lstm_iter_{stock}_len{data_length}_r{r}_s{s}.csv')
 
     reg = LogisticRegression(class_weight=get_classes_weights(df))
     reg.fit(df[['queue_imbalance']], df['mid_price_indicator'])
@@ -53,7 +53,7 @@ def perform_mcnemar(res):
     df_mcnemar['FP'] = [table[1][0]]
     df_mcnemar['TP'] = [table[1][1]]
     df_mcnemar['stock'] = stock
-    df_mcnemar.to_csv(f'predictions/mcnemar_lstm_best_log_{stock}_len{data_length}_r{r}_s{s}.csv')
+    df_mcnemar.to_csv(f'res_lstm_predictions/mcnemar_lstm_log_{stock}_len{data_length}_r{r}_s{s}.csv')
     return mcnemar_res
 
 
