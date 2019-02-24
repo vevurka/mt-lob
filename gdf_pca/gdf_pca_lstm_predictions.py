@@ -1,55 +1,10 @@
-import functools
-import json
 import logging
 import os
 
 import pandas as pd
-import sklearn
-
-
-from lob_data_utils import gdf_pca, stocks_numbers
-from numpy.random import seed
-
-import tensorflow as tf
-from keras import backend as K
 from keras.models import model_from_json
-from keras.utils import plot_model
-
-
-def as_keras_metric(method):
-    @functools.wraps(method)
-    def wrapper(self, args, **kwargs):
-        """ Wrapper for turning tensorflow metrics into keras metrics """
-        value, update_op = method(self, args, **kwargs)
-        K.get_session().run(tf.local_variables_initializer())
-        with tf.control_dependencies([update_op]):
-            value = tf.identity(value)
-        return value
-
-    return wrapper
-
-
-def matthews_correlation(y_true, y_pred):
-    from keras import backend as K
-    y_pred_pos = K.round(K.clip(y_pred, 0, 1))
-    y_pred_neg = 1 - y_pred_pos
-
-    y_pos = K.round(K.clip(y_true, 0, 1))
-    y_neg = 1 - y_pos
-
-    tp = K.sum(y_pos * y_pred_pos)
-    tn = K.sum(y_neg * y_pred_neg)
-
-    fp = K.sum(y_neg * y_pred_pos)
-    fn = K.sum(y_pos * y_pred_neg)
-
-    numerator = (tp * tn - fp * fn)
-    denominator = K.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
-
-    return numerator / (denominator + K.epsilon())
-
-auc_roc = as_keras_metric(tf.metrics.auc)
-seed(1)
+from lob_data_utils import gdf_pca, stocks_numbers
+from lob_data_utils.keras_metrics import matthews_correlation, auc_roc
 
 
 def get_model(arch):
@@ -77,7 +32,7 @@ def train_lstm(res):
     epochs = 50
     batch_size = 512
 
-    filename = os.path.join('predictions', f'pred_lstm_best_{stock}_len{data_length}_r{r}_s{s}.csv')
+    filename = os.path.join('res_lstm_predictions', f'pred_lstm_iter_{stock}_len{data_length}_r{r}_s{s}.csv')
     if os.path.exists(filename):
         print(f'Exists {filename}.')
         return None
