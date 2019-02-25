@@ -8,7 +8,7 @@ from lob_data_utils.keras_metrics import matthews_correlation, auc_roc
 logger = logging.getLogger(__name__)
 
 
-def get_lstm_model_for_arch(arch):
+def get_gru_model_for_arch(arch):
     def get_model():
         from keras.models import model_from_json
         m = model_from_json(arch)
@@ -17,7 +17,7 @@ def get_lstm_model_for_arch(arch):
     return get_model
 
 
-def train_lstm(res):
+def train_gru(res):
     data_length = 24000
     r = res['r'].values[0]
     s = res['s'].values[0]
@@ -34,7 +34,7 @@ def train_lstm(res):
     epochs = 50
     batch_size = 512
 
-    filename = os.path.join('res_lstm_iter', f'res_lstm_iter_{stock}_len{data_length}_r{r}_s{s}.csv')
+    filename = os.path.join('res_gru_iter', f'res_gru_iter_{stock}_len{data_length}_r{r}_s{s}.csv')
     partial_filename = filename + '_partial'
 
     # if os.path.exists(filename):
@@ -47,7 +47,7 @@ def train_lstm(res):
 
     if len(df_partial) < 30:
         logger.info('Iteration %s stock %s', len(df_partial), stock)
-        get_model = get_lstm_model_for_arch(arch)
+        get_model = get_gru_model_for_arch(arch)
         try:
             score = gdf_dfs.train_lstm(
                 get_model, feature_name=feature,
@@ -78,11 +78,11 @@ def get_best_results(data_dir):
 def main():
     import sys
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
-    data_dir = 'res_lstm/'
+    data_dir = 'res_gru/'
     s = sys.argv[1]
     logger.info('Stock %s', s)
     df_best = get_best_results(data_dir)
-    train_lstm(df_best[df_best['stock'] == int(s)])
+    train_gru(df_best[df_best['stock'] == int(s)])
 
 
 if __name__ == '__main__':
