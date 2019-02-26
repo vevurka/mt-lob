@@ -20,7 +20,7 @@ def is_calculated(df, C, gamma, coef0):
 
 
 def main(stock):
-    results_dir = 'res_que_svm'
+    results_dir = 'res_prev_que_svm'
     data_length = 24000
     svm_gdf_res = LobClassifySimple(stock, data_length=data_length, data_dir='../data/prepared')
 
@@ -38,7 +38,7 @@ def main(stock):
                 if is_calculated(df_partial, C, g, coef0):
                     logger.info('Already calculated %s %s %s %s', stock, C, g, coef0)
                     continue
-                scores = svm_gdf_res.train_svm(C=C, gamma=g, kernel='sigmoid', feature_name='que',
+                scores = svm_gdf_res.train_svm(C=C, gamma=g, kernel='sigmoid', feature_name='que_prev',
                                                coef0=coef0, class_weight=weights)
                 df_partial = df_partial.append([scores])
                 df_partial.to_csv(filename_partial)
