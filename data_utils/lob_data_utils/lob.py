@@ -86,7 +86,7 @@ def prepare_dataset(stock: str, df: pd.DataFrame, include_test=True) -> Sequence
     if include_test:
         return train, test
     else:
-        return df
+        return df, None
 
 
 def load_data(stock: str, data_dir=None, include_test=True) -> Sequence[pd.DataFrame]:
