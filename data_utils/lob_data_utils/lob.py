@@ -13,7 +13,9 @@ import numpy as np
 import warnings
 
 from sklearn.metrics import roc_auc_score, roc_curve, f1_score, precision_recall_curve
+import logging
 
+logger = logging.getLogger(__name__)
 
 warnings.filterwarnings('ignore')
 
@@ -46,6 +48,7 @@ def parse_order_book_helper(order_book: str) -> Tuple[datetime, list, list]:
 
 
 def parse_data(filename: str) -> pd.DataFrame:
+    logger.debug('Started parsing %s', filename)
     with open(filename) as f:
         order_books = f.read().split('\n')
     parsed_order_book = []
@@ -65,10 +68,10 @@ def load_prepared_data(stock: str, data_dir=None, length=None,
         data_dir = '../data/prepared/'
     df = pd.read_csv(os.path.join(data_dir, stock + '.csv'))
 
-    # print('Len of data for ', stock, 'is', len(df))
+    logger.debug('Len of data for ', stock, 'is', len(df))
     if length:
         if length > len(df):
-            print('Not enough data for {} actual len: {}, wanted len: {}'.format(stock, len(df), length))
+            logger.warning('Not enough data for {} actual len: {}, wanted len: {}'.format(stock, len(df), length))
             return None, None
         return prepare_dataset(stock, df[0:length], include_test=include_test)
     else:
@@ -80,14 +83,10 @@ def prepare_dataset(stock: str, df: pd.DataFrame, include_test=True) -> Sequence
     train = df.iloc[0:4*idx]
     test = df.iloc[4*idx:len(df)]
 
-    # print('Training set length for {}: {}'.format(stock, len(train)))
-    # print('Testing set length for {}: {}'.format(stock, len(test)))
-
     if include_test:
         return train, test
     else:
-        #print('no test or train')
-        return df, None
+        return df
 
 
 def load_data(stock: str, data_dir=None, include_test=True) -> Sequence[pd.DataFrame]:
@@ -96,11 +95,10 @@ def load_data(stock: str, data_dir=None, include_test=True) -> Sequence[pd.DataF
     train_dates = ['0901', '0916', '1001', '1016', '1101']
     df = pd.DataFrame()
     for date in train_dates:
-        print(date)
         dfs = parse_data(data_dir + 'OrderBookSnapshots_{}_{}.csv'.format(stock, date))
         dfs = dfs.between_time('8:30', '16:00')
         df = df.append(dfs)
-    print('finished parsing')
+    logger.info('Finished parsing %s', stock)
     df = df.sort_index()
     df = df.reindex()
     df = prepare_dataframe(df)
