@@ -1,11 +1,13 @@
+import logging
 import os
 from ast import literal_eval
-from datetime import datetime
 
 import numpy as np
 import pandas as pd
-from lob_data_utils import roc_results
+from lob_data_utils import stocks_numbers
 from scipy.stats import norm
+
+logger = logging.getLogger(__name__)
 
 
 def gdf_representation(buy_orders, sell_orders, gdf):
@@ -21,8 +23,7 @@ def transform_to_orders(df: pd.DataFrame, gdfs, K) -> pd.DataFrame:
     df.index = df['Unnamed: 0']
     df.index = pd.to_datetime(df.index)
 
-    rng = pd.date_range(min(df.index), max(df.index), freq='d')
-
+    # rng = pd.date_range(min(df.index), max(df.index), freq='d')
     # df = df.loc[str(rng[1].date()):]
     for idx, row in df.iterrows():
         try:
@@ -55,17 +56,16 @@ def transform_to_orders(df: pd.DataFrame, gdfs, K) -> pd.DataFrame:
 
 
 def main(stock):
-    data_dir_in = '../data/data_normalized'
-    data_dir_out = '../data/data_gdf'
-    #rs = [(0.1, 0.1), (0.1, 0.5), (0.01, 0.1), (0.01, 0.5)]
-    rs = [(0.25, 0.25)]
+    data_dir_in = 'data/data_normalized'
+    data_dir_out = 'data/data_gdf'
+    normalized_file = '{}_normalized.csv'.format(stock)
+
+    rs = [(0.1, 0.1), (0.1, 0.5), (0.01, 0.1), (0.01, 0.5), (0.25, 0.25)]
     K = 50
-    print(stock, datetime.now().isoformat())
     for r, s in rs:
         filename = 'gdf_{}_r{}_s{}_K{}.csv'.format(stock, r, s, K)
         if os.path.exists(os.path.join(data_dir_out, filename)):
-
-            print('already exists ', filename, datetime.now().isoformat())
+            logger.info('Already exists %s', filename)
             continue
 
         gdfs_r = r * np.ones(K)
@@ -73,27 +73,22 @@ def main(stock):
         gdfs_s = s * np.ones(K)
         gdfs = np.vstack([gdfs_r, gdfs_m, gdfs_s]).T
 
-        print('preparing', filename, datetime.now().isoformat())
+        logger.info('Preparing %s from %s', filename, normalized_file)
 
-        df = pd.read_csv(
-            os.path.join(data_dir_in, '{}_normalized.csv'.format(stock)))
+        df = pd.read_csv(os.path.join(data_dir_in, normalized_file))
         df = transform_to_orders(df, gdfs, K)
-        print('writing', filename, len(df), datetime.now().isoformat())
+        logger.info('Writing to %s  length %s', filename, len(df))
         df.to_csv(os.path.join(data_dir_out, filename))
     return True
 
 
 if __name__ == "__main__":
     from multiprocessing import Pool
-    cluster1 = ['9061', '3459', '4549', '9761', '4851']
-    cluster2 = ['9062', '11869', '12255', '2748', '4320']
-    cluster3 = ['11583', '4799', '9268', '10470', '9058']
 
-    stocks = cluster1 + cluster2 + cluster3
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
+    stocks = stocks_numbers.chosen_stocks
 
     pool = Pool(processes=16)
 
     res = [pool.apply_async(main, [s]) for s in stocks]
     print([r.get() for r in res])
-
-
